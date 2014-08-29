@@ -4,10 +4,10 @@
 #
 set -u -e -o pipefail
 
-files="$(find specs/ -maxdepth 1 -type f -iname "*.rb" -and -not -iname "helpers.rb")"
+files="$(echo -n specs/*.rb | tr ' ' '\n' | sort)"
 if [[ -z "$files" ]]; then
   colorize yellow "No tests found." 1>&2
   exit 0
 else
-  bundle exec bacon specs/helpers.rb $files "$@"
+  bundle exec bacon specs/lib/helpers.rb $files "$@"
 fi
