@@ -1,7 +1,7 @@
 
 # Doki
 
-I have no idea.
+A Ruby gem for managing validation and records using PostgreSQL.
 
 ## Installation
 
@@ -10,3 +10,4 @@ I have no idea.
 ## Usage
 
 No coming any time soon.
+
