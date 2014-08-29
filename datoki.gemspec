@@ -3,7 +3,7 @@ lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 Gem::Specification.new do |spec|
-  spec.name          = "doki"
+  spec.name          = "datoki"
   spec.version       = `cat VERSION`
   spec.authors       = ["da99"]
   spec.email         = ["i-hate-spam-1234567@mailinator.com"]
@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.description   = %q{
     My way of dealing with postgresql 9.3+ databases.
   }
-  spec.homepage      = "https://github.com/da99/doki"
+  spec.homepage      = "https://github.com/da99/datoki"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files -z`.split("\x0").reject { |file|

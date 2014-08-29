@@ -1,11 +1,11 @@
 
-# Doki
+# Datoki
 
 A Ruby gem for managing validation and records using PostgreSQL.
 
 ## Installation
 
-    gem 'doki'
+    gem 'datoki'
 
 ## Usage
 

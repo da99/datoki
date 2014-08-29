@@ -1,5 +1,5 @@
 
-module Doki
+module Datoki
 
   Invalid = Class.new RuntimeError
   class << self
@@ -61,11 +61,8 @@ module Doki
     super
   end
 
-  def new_data h
+  def create h
     @new_data = h
-  end
-
-  def create
     @insert_data = {}
     @new_data.each { | k, v |
       defs = self.class.fields[k]
@@ -81,4 +78,4 @@ module Doki
     }
   end
 
-end # === module Doki ===
+end # === module Datoki ===

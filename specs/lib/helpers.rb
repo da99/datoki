@@ -1,4 +1,4 @@
 
 require 'Bacon_Colored'
-require 'doki'
+require 'datoki'
 require 'pry'
