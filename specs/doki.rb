@@ -11,7 +11,8 @@ describe Doki do
     record = c.new
     should.raise(Doki::Invalid) {
       record.new_data :name=>'1234'
-    }.message.should.match /"Name" is too long./
+      record.create
+    }.message.should.match /must be shorter or equal to 3/
   end
 
 end # === describe doki ===
