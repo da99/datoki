@@ -1,0 +1,78 @@
+extends ./layout
+
+block footer
+  script(src='/App/js/#{template_name}index.js')
+
+block content
+
+  include _log_out
+
+  div(id='intro')
+    include _keywords
+
+    h2 Welcome, #{customer_screen_names.join(', ')}.
+
+  div.block(id='what_you_can_do_now')
+    h2 What you can do now:
+    div.body
+      | You can go into chat:&nbsp;
+      a(href="/chat") okdoki.com/chat
+
+  div.block(id='homepages')
+    h2 Your homepages:
+    div.body
+      ul
+      for x in customer_screen_names
+        li <a href="/info/#{x}">okdoki.com/info/#{x}</a>
+
+  div.block(id='create_screen_name')
+    h2 Create Another Screen Name:
+    div.body
+      p
+        | Create a screen name for different aspects of your life:
+        | <span class="label">work</span>,
+        | <span class="label">school</span>,
+        | <span class="label">friends</span>,
+        | etc.
+        | It helps keep your lifes private and better organized.
+
+      form(id='form_create_screen_name', action='/create/screen_name', method='post')
+        div.fields
+          div.field.screen_name
+            input(type='text', name='screen_name')
+          div.field.buttons
+            input.field(type='hidden', name="_csrf", value="#{token}")
+            button.submit(id='submit_form_create_screen_name') Create
+
+  div.block(id='trash_e')
+    h2 Delete Account:
+    div.body
+      p
+        | All your&nbsp;
+        span.label screen-names
+        |  and posts will be deleted within 48 hours.
+        | You have this time to change your mind.
+        | After 48 hours, it will be as if you never existed
+        | on OKdoki.com.
+      div.buttons
+        button Delete Account Forever
+
+  div.block(id='contacts')
+    h2 Contacts List:
+    div.body
+      - for x in customer_screen_names
+        div.contact
+          a(href="/info/#{x}") @#{x}
+          span.value : #{x}
+
+  div.block.loading(id='latest')
+    h2 News Feed:
+    div.body
+
+      div.item.please_wait
+        | Please wait. Your news is 
+        | being retrieved.
+
+
+
+
