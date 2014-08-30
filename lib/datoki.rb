@@ -3,13 +3,14 @@ require 'sequel'
 
 module Datoki
 
+  UTC_NOW_DATE = ::Sequel.lit("CURRENT_DATE")
   UTC_NOW_RAW  = "timezone('UTC'::text, now())"
   UTC_NOW      = ::Sequel.lit("timezone('UTC'::text, now())")
-  UTC_NOW_DATE = ::Sequel.lit("CURRENT_DATE")
 
   Invalid = Class.new RuntimeError
 
-  Actions = [:create, :read, :update, :update_or_create, :trash, :delete]
+  Actions = [:all, :create, :read, :update, :update_or_create, :trash, :delete]
+  Types   = [:string, :integer, :array]
 
   class << self
 
@@ -23,51 +24,68 @@ module Datoki
   module Def_Field
 
     def initialize_def_field
-      @fields = {}
-      @required = Actions.inject({:all=>[]}) { |memo, name| memo[name] = []; memo }
-      @current_field = nil
-      @current_on = nil
+      @def_fields = Actions.inject({:fields=>{}, :current_field=>nil, :current_on=>nil}) { |memo, name|
+        memo[name] = {:name=>name, :specs=>[]}
+        memo
+      }
     end
 
     def fields
-      @fields
+      @def_fields[:fields]
     end
 
     def field? o
-      current_field[:type] == :string
+      field[:type] == o
     end
 
-    def field name
-      @current_field = name
+    def field *args
+      return fields[@def_field[:current_field]] if args.empty?
+      return fields[args.first] unless block_given?
 
-      @fields[@current_field] ||= {
-        :on           => {:all=>[]},
+      name = args.first
+
+      fields[name] ||= {
+        :name         => name,
         :english_name => name.to_s.freeze
       }
 
-      @current_on = :all
+      @def_fields[:current_field] = name
+      on nil
       yield
+      @def_fields[:current_field] = nil
     end
 
-    def in_on?
-      @current_on != :all
+    def on? args
+      if args.empty?
+        @def_fields[:current_on] != nil
+      else
+        @def_fields[:current_on] == args.first
+      end
     end
 
-    def current_on
-      @fields[@current_field][:on][@current_on]
-    end
+    def on *actions
+      return @def_fields[@def_fields[:current_on]] if actions.empty?
+      return(@def_fields[:current_on] = @def_fields[actions.first]) unless block_given?
 
-    def current_field
-      @fields[@current_field]
+      actions.each { |name|
+
+        fail "Invalid action: #{name.inspect}" unless Actions.include? name
+        orig = on
+        on name
+        yield
+        on orig[:name]
+      }
+
+      self
     end
 
     def string *args
-      current_field[:type] = :string
-      current_field[:min]  ||= 0
-      current_field[:max]  ||= 255
+      field[:type] = :string
+      field[:min]  ||= 0
+      field[:max]  ||= 255
 
-      current_on << :check_type
-      current_on << :check_size
+      spec :check_type
+      spec :check_size
 
       case args.size
       when 0
@@ -80,21 +98,6 @@ module Datoki
       else
         fail "Unknown args: #{args.inspect}"
       end
-
-      self
-    end
-
-    def on *actions
-      actions.each { |name|
-
-        fail "Invalid action: #{name.inspect}" unless Actions.include? name
-        current_field[:on][name] ||= []
-
-        orig = current_on
-        @current_on = name
-        yield
-        @current_on = orig
-      }
 
       self
     end
@@ -138,11 +141,11 @@ module Datoki
     }
 
     def min i
-      current_on << [:min, Integer(i)]
+      current_field[:min] = Integer(i)
     end
 
     def max i
-      current_on << [:max, Integer(i)]
+      current_field[:max] = Integer(i)
     end
 
     def within min, max
@@ -192,10 +195,12 @@ module Datoki
             when defs[:min] == defs[:max] && v.size != defs[:max]
               fail Invalid, %^"#{k}}" must be #{defs[:max]} characters long.^
             when v.size < defs[:min]
-              fail Invalid, "\"#{k}\" must be longer than #{defs[:min]} in length."
+              fail Invalid, "\"#{k}\" must be at least #{defs[:min]} characters in length."
             when v.size > defs[:max]
-              fail Invalid, "\"#{k}\" must be shorter or equal to #{defs[:max]} in length."
+              fail Invalid, "\"#{k}\" must be shorter or equal to #{defs[:max]} characters in length."
             end
+          else
+            fail "Type not found: #{defs[:type].inspect}"
           end
 
         when :check_type
@@ -204,6 +209,7 @@ module Datoki
             fail Invalid, "\"#{k}\" must be a string."
           end
 
+        when :min
         else
           fail "Unknown requirement: #{spec.inspect}"
         end
