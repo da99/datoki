@@ -1,4 +1,6 @@
 
+require 'sequel'
+
 module Datoki
 
   UTC_NOW_RAW  = "timezone('UTC'::text, now())"
@@ -85,7 +87,7 @@ module Datoki
       self
     end
 
-    %{
+    %w{
       required
       be
       strip
