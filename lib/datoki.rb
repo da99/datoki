@@ -230,22 +230,35 @@ module Datoki
     end
   end
 
-  def val *args
+  def val
+    if clean_data.has_key?(field_name)
+      clean_data[field_name]
+    else
+      new_data[field_name]
+    end
+  end
+
+  def val! new_val
+    clean_data[field_name] = args.first
+  end
+
+  def field *args
     case args.size
     when 0
-      if clean_data.has_key?(field_name)
-        clean_data[field_name]
-      else
-        new_data[field_name]
-      end
+      self.class.fields[field_name]
     when 1
+      self.class.fields[args.first]
     else
       fail "Unknown args: #{args.inspect}"
     end
   end
 
+  def field? class_or_sym
+    field[:type] == class_or_sym
+  end
+
   def run action
-    self.class.fields.each { |f_name, field|
+    self.class.fields.each { |f_name, f_meta|
       field_name f_name
       field[:cleaners].each { |cleaner, args|
         next if args === false
@@ -263,7 +276,7 @@ module Datoki
 
         when :set_to
           args.each { |meth|
-            val send(meth)
+            val! send(meth)
           }
 
         when :equal_to
@@ -278,13 +291,13 @@ module Datoki
           fail!(msg || "!English_name must be one of these: #{arr.join ', '}") unless arr.include?(val)
 
         when :strip
-          val val.strip
+          val! val.strip
 
         when :upcase
-          val val.upcase
+          val! val.upcase
 
         when :to_i
-          val val.to_i
+          val! val.to_i
 
         when :match
           args.each { |pair|
@@ -306,10 +319,10 @@ module Datoki
           target = val.is_a?(Numeric) ? val : val.size
 
           if target < field[:min]
-            err_msg = case field[:type]
-                      when :string
+            err_msg = case
+                      when field?(:string) || val.is_a?(String)
                         "!English_name must be equal or more than !min in length."
-                      when :array
+                      when field?(:array) || val.is_a?(Array)
                         "!English_name must have at least !min."
                       else
                         "!English_name must be at least !min."
@@ -322,10 +335,10 @@ module Datoki
           target = val.is_a?(Numeric) ? val : val.size
 
           if target < field[:max]
-            err_msg = case field[:type]
-                      when :string
+            err_msg = case
+                      when field?(:string) || val.is_a?(String)
                         "!English_name has a maximum of !max in length."
-                      when :array
+                      when field?(:array) || val.is_a?(Array)
                         "!English_name has a maximum of !max."
                       else
                         "!English_name can't be more than !max."
