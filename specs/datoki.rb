@@ -14,9 +14,9 @@ describe 'No type' do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
-        field(:title) { min 4 }
-      }.create :title => %w{ 1 2 }
-    }.message.should.match /must has at least 4/
+        field(:names) { min 4 }
+      }.create :names => %w{ 1 2 }
+    }.message.should.match /Names must have at least 4/
   end
 
   it "does not allow nil by default" do
@@ -25,7 +25,7 @@ describe 'No type' do
         include Datoki
         field(:body) { }
       }.create :body => nil
-    }.message.should.match /.?body.? is required/i
+    }.message.should.match /Body is required/i
   end
 
   it "requires field by default" do
@@ -34,7 +34,7 @@ describe 'No type' do
         include Datoki
         field(:title) { }
       }.create
-    }.message.should.match /.?title.? is required/i
+    }.message.should.match /Title is required/i
   end
 
   it "allows nil if specified" do

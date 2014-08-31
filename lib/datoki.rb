@@ -304,14 +304,34 @@ module Datoki
 
         when :min
           target = val.is_a?(Numeric) ? val : val.size
+
           if target < field[:min]
-            fail! "!English_name must be equal or more than !min"
+            err_msg = case field[:type]
+                      when :string
+                        "!English_name must be equal or more than !min in length."
+                      when :array
+                        "!English_name must have at least !min."
+                      else
+                        "!English_name must be at least !min."
+                      end
+
+            fail! err_msg
           end
 
         when :max
           target = val.is_a?(Numeric) ? val : val.size
-          if target >= field[:max]
-            fail! "!English_name must be equal or less than !max"
+
+          if target < field[:max]
+            err_msg = case field[:type]
+                      when :string
+                        "!English_name has a maximum of !max in length."
+                      when :array
+                        "!English_name has a maximum of !max."
+                      else
+                        "!English_name can't be more than !max."
+                      end
+
+            fail! err_msg
           end
 
         when :within
