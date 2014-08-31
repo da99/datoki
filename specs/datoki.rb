@@ -7,7 +7,7 @@ describe 'No type' do
         include Datoki
         field(:title) { min 3 }
       }.create :title => '1'
-    }.message.should.match /Title must have a length of at least 3/i
+    }.message.should.match /Title must be at least 3/i
   end
 
   it "fails when Array is less than min:" do
@@ -75,7 +75,7 @@ describe String do # ================================================
         include Datoki
         field(:title) { string; max 5 }
       }.create :title => '123456'
-    }.message.should.match /must be less than 5/
+    }.message.should.match /Title has a maximum length of 5/
   end
 
   it "fails when string does not match pattern: match /../" do
@@ -103,7 +103,7 @@ describe String do # ================================================
 
   it "sets field to return value of :set_to" do
     Class.new {
-      includ Datoki
+      include Datoki
       field(:title) {
         string
         set_to :custom_error
@@ -114,6 +114,15 @@ describe String do # ================================================
     }.
     create(:title => 'My Title').
     clean_data[:title].should.match /Custom title/
+  end
+
+  it "strips strings by default" do
+    Class.new {
+      include Datoki
+      field(:title) { string }
+    }.
+    create(:title => ' my title ').
+    clean_data[:title].should == 'my title'
   end
 
   it "can prevent string from being stripped" do

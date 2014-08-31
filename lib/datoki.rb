@@ -81,6 +81,7 @@ module Datoki
       field[:max]  ||= 255
 
       field[:cleaners][:type] = true
+      field[:cleaners][:strip] = true
 
       case args.size
       when 0
@@ -271,7 +272,9 @@ module Datoki
     self.class.fields.each { |f_name, f_meta|
       field_name f_name
 
-      if !new_data.has_key?(field_name)
+      if new_data.has_key?(field_name)
+        val! new_data[f_name]
+      else
         val! field[:default]
       end
 
@@ -351,7 +354,7 @@ module Datoki
           if target < field[:min]
             err_msg = case
                       when field?(:string) || val.is_a?(String)
-                        "!English_name must have a length of at least !min."
+                        "!English_name must be at least !min in length."
                       when field?(:array) || val.is_a?(Array)
                         "!English_name must have at least !min."
                       else
@@ -364,10 +367,10 @@ module Datoki
         when :max
           target = val.is_a?(Numeric) ? val : val.size
 
-          if target < field[:max]
+          if target > field[:max]
             err_msg = case
                       when field?(:string) || val.is_a?(String)
-                        "!English_name has a maximum of !max in length."
+                        "!English_name has a maximum length of !max."
                       when field?(:array) || val.is_a?(Array)
                         "!English_name has a maximum of !max."
                       else
