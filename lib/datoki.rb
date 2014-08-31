@@ -415,6 +415,12 @@ module Datoki
         end # === case cleaner
 
       } # === cleaners
+
+      field[:on][action].each { |meth, is_enabled|
+        next unless is_enabled
+        send meth
+      } if field[:on][action]
+
     } # === field
 
     self.class.ons.each { |action, meths|
