@@ -24,10 +24,19 @@ module Datoki
   module Def_Field
 
     def initialize_def_field
+      @record_errors = false
       @def_fields = Actions.inject({:fields=>{}, :current_field=>nil, :current_on=>nil}) { |memo, name|
         memo[name] = {:name=>name, :specs=>[]}
         memo
       }
+    end
+
+    def record_errors?
+      @record_errors
+    end
+
+    def record_errors
+      @record_errors = true
     end
 
     def fields
@@ -98,14 +107,14 @@ module Datoki
       }
     end
 
-    def set_to meth_name_sym
+    def set_to *args
       field[:cleaners][:set_to] ||= []
-      field[:cleaners][:set_to] << meth_name_sym
+      field[:cleaners][:set_to].concat args
     end
 
-    def equal_to meth_name_sym
+    def equal_to *args
       field[:cleaners][:equal_to] ||= []
-      field[:cleaners][:equal_to] << meth_name_sym
+      field[:cleaners][:equal_to].concat args
     end
 
     def included_in arr
@@ -135,8 +144,8 @@ module Datoki
 
     def not_match *args
       fail "Not allowed for #{field[:type].inspect}" unless field?(:string)
-      field[:cleaner][:match] ||= []
-      field[:cleaner][:match] << args
+      field[:cleaner][:not_match] ||= []
+      field[:cleaner][:not_match] << args
       self
     end
 
@@ -161,7 +170,6 @@ module Datoki
     def create h
       r = new
       r.create h
-      r
     end
 
   end # === Def_Field
@@ -170,63 +178,150 @@ module Datoki
 
   attr_reader :clean_data
 
-  def initialize
-    @new_data = {}
+  def initialize data = {}
+    @data       = data
+    @new_data   = nil
+    @field_name = nil
     super
   end
 
-  def create h
-    @new_data = h
-    @insert_data = {}
-    @new_data.each { | k, v |
-      defs = self.class.fields[k]
-      defs[:on][:all].each { |meta|
-        if meta.is_a?(Symbol)
-          spec, args = meta, nil
-        else
-          spec, args = meta
-        end
+  def fail! msg
+    err_msg = msg.gsub(/!([a-z\_\-])/i) { |raw|
+      name = $1
+      case name
+      when "ENGLISH_NAME"
+        self.class.fields[field_name][:english_name]
+      when "MAX", "MIN"
+        self.class.fields[field_name][name.downcase.to_sym]
+      else
+        fail "Unknown value: #{name}"
+      end
+    }
 
-        case spec
+    if self.class.record_errors?
+      @errors << [err_msg, field_name, val]
+    else
+      fail Invalid, error_msg
+    end
+  end
 
-        when :check_size
+  def field_name *args
+    case args.size
+    when 0
+      fail "Field name not set." unless @field_name
+      @field_name
+    when 1
+      @field_name = args.first
+    else
+      fail "Unknown args: #{args.inspect}"
+    end
+  end
 
-          case defs[:type]
+  def val *args
+    case args.size
+    when 0
+      if clean_data.has_key?(field_name)
+        clean_data[field_name]
+      else
+        new_data[field_name]
+      end
+    when 1
+    else
+      fail "Unknown args: #{args.inspect}"
+    end
+  end
+
+  def run action
+    self.class.fields.each { |field|
+      field_name field[:name]
+      field[:cleaners].each { |cleaner, args|
+        next if args === false
+        next if field[:allow][:nil] && (!new_data.has_key?(field[:name]) || new_data[:name].nil?)
+
+        case cleaner
+
+        when :type
+          case field[:type]
           when :string
-            case
-            when defs[:min] == defs[:max] && v.size != defs[:max]
-              fail Invalid, %^"#{k}}" must be #{defs[:max]} characters long.^
-            when v.size < defs[:min]
-              fail Invalid, "\"#{k}\" must be at least #{defs[:min]} characters in length."
-            when v.size > defs[:max]
-              fail Invalid, "\"#{k}\" must be shorter or equal to #{defs[:max]} characters in length."
-            end
+            fail error_msg("!ENGLISH_NAME needs to be a String.") unless val.is_a?(String)
           else
-            fail "Type not found: #{defs[:type].inspect}"
+            fail "Unknown type: #{field[:type].inspect}"
           end
 
-        when :check_type
-          case
-          when defs[:type] == :string && !v.is_a?(String)
-            fail Invalid, "\"#{k}\" must be a string."
-          end
+        when :set_to
+          args.each { |meth|
+            val send(meth)
+          }
+
+        when :equal_to
+          args.each { |pair|
+            meth, msg, other = pair
+            target = send(meth)
+            fail!(error_msg(msg || "!ENGLISH_NAME must be equal to: #{target.inspect}")) unless val == target
+          }
+
+        when :included_in
+          arr, msg, other = args
+          fail!(msg || "!ENGLISH_NAME must be one of these: #{arr.join ', '}") unless arr.include?(val)
+
+        when :strip
+          val val.strip
+
+        when :upcase
+          val val.upcase
+
+        when :to_i
+          val val.to_i
+
+        when :match
+          args.each { |pair|
+            regex, msg, other = pair
+            if val !~ regex
+              fail!(msg || "!ENGLISH_NAME must match #{regex.inspect}")
+            end
+          }
+
+        when :not_match
+          args.each { |pair|
+            regex, msg, other = pair
+            if val =~ regex
+              fail!(msg || "!ENGLISH_NAME must not match #{regex.inspect}")
+            end
+          }
 
         when :min
+          if val < field[:max]
+            fail!("!ENGLISH_NAME must be equal or more than: !MIN"
+          end
+
+        when :max
+          if val >= field[:max]
+            fail!("!ENGLISH_NAME must be equal or less than: !MAX"
+          end
+
+        when :within
+          if val < field[:min] || val > field[:max]
+            fail!("!ENGLISH_NAME must be within: !MIN and !MAX"
+          end
+
         else
-          fail "Unknown requirement: #{spec.inspect}"
-        end
+          fail "Cleaner not implemented: #{cleaner.inspect}"
+        end # === case cleaner
 
-        @new_data[k] = v
-      }
-    }
+      } # === cleaners
+    } # === field
   end
 
-  def db_insert
-    @clean_data
+  def create new_data
+    @new_data = new_data
+    run :create
+    self
   end
 
-  def db_update
-    @clean_data
+  def update new_data
+    @new_data = new_data
+    run :update
+    self
   end
 
 end # === module Datoki ===
