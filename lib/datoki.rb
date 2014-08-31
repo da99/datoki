@@ -25,9 +25,10 @@ module Datoki
 
     def initialize_def_field
       @record_errors = false
-      @def_fields = Actions.inject({:fields=>{}, :current_field=>nil, :current_on=>nil}) { |memo, name|
-        memo[name] = {:name=>name, :specs=>[]}
-        memo
+      @def_fields = {
+        :on            => {},
+        :fields        => {},
+        :current_field => nil
       }
     end
 
@@ -61,7 +62,7 @@ module Datoki
         :allow        => {},
         :disable      => {},
         :cleaners     => {:check_required=>true},
-        :on           => Actions.inject({}) { |memo, a| memo[a] = []; memo}
+        :on           => {}
       }
 
       @def_fields[:current_field] = name
@@ -71,8 +72,18 @@ module Datoki
 
     def on action, meth_name_sym
       fail "Invalid action: #{action.inspect}" unless Actions.include? action
-      field[:on][action] << meth_name_sym
+      if field
+        field[:on][action] ||= {}
+        field[:on][action][meth_name_sym] = true
+      else
+        @def_fields[:on][action] ||= {}
+        @def_fields[:on][action][meth_name_sym] = true
+      end
       self
+    end
+
+    def ons
+      @def_fields[:on]
     end
 
     def array
@@ -405,6 +416,13 @@ module Datoki
 
       } # === cleaners
     } # === field
+
+    self.class.ons.each { |action, meths|
+      meths.each { |meth, is_enabled|
+        next unless is_enabled
+        send meth
+      }
+    }
   end
 
   def create new_data
