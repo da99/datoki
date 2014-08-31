@@ -176,7 +176,7 @@ describe "on :create" do
         default 'default body'
       }
     }.
-    create().
+    create.
     clean_data[:body].should == 'default body with new stuff'
   end
 

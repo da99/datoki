@@ -46,36 +46,22 @@ module Datoki
 
       fields[name] ||= {
         :name         => name,
-        :english_name => name.to_s.freeze
+        :type         => :unknown,
+        :english_name => name.to_s.freeze,
+        :allow        => {},
+        :disable      => {},
+        :cleaners     => {},
+        :on           => Actions.inject({}) { |memo, a| memo[a] = []; memo}
       }
 
       @def_fields[:current_field] = name
-      on nil
       yield
       @def_fields[:current_field] = nil
     end
 
-    def on? args
-      if args.empty?
-        @def_fields[:current_on] != nil
-      else
-        @def_fields[:current_on] == args.first
-      end
-    end
-
-    def on *actions
-      return @def_fields[@def_fields[:current_on]] if actions.empty?
-      return(@def_fields[:current_on] = @def_fields[actions.first]) unless block_given?
-
-      actions.each { |name|
-
-        fail "Invalid action: #{name.inspect}" unless Actions.include? name
-        orig = on
-        on name
-        yield
-        on orig[:name]
-      }
-
+    def on action, meth_name_sym
+      fail "Invalid action: #{action.inspect}" unless Actions.include? action
+      field[:on][action] << meth_name_sym
       self
     end
 
@@ -84,76 +70,92 @@ module Datoki
       field[:min]  ||= 0
       field[:max]  ||= 255
 
-      spec :check_type
-      spec :check_size
-
       case args.size
       when 0
         # do nothing else
       when 1
-        current_field[:max] = current_field[:min] = args.first
+        field[:exact_size] = args.first
       when 2
-        current_field[:min] = args.first
-        current_field[:max] = args.last
+        field[:min] = args.first
+        field[:max] = args.last
       else
         fail "Unknown args: #{args.inspect}"
       end
 
+      field[:cleaners][:type] = true
       self
     end
 
-    def required
-      if in_on?
-        @required[@current_on] << @current_field
-      else
-        @required[:all] << @current_field
-      end
+    def allow *props
+      props.each { |prop|
+        field[:allow][prop] = true
+      }
     end
 
-    %w{
-      be
-      set_to
-      equal_to
-      nil_if_empty
-      one_of_these
-    }.each { |name|
-      eval <<-EOF
-        def #{name} *args
-          common_on << [:#{name}, *args]
-        end
-      EOF
-    }
+    def disable *props
+      props.each { |prop|
+        field[:cleaners][prop] = false
+      }
+    end
+
+    def set_to meth_name_sym
+      field[:cleaners][:set_to] ||= []
+      field[:cleaners][:set_to] << meth_name_sym
+    end
+
+    def equal_to meth_name_sym
+      field[:cleaners][:equal_to] ||= []
+      field[:cleaners][:equal_to] << meth_name_sym
+    end
+
+    def included_in arr
+      field[:cleaner][:included_in] ||= []
+      field[:cleaner][:included_in].concat arr
+    end
 
     # === String-only methods ===========
     %w{
       strip
       upcase
       to_i
-      match
-      not_match
     }.each { |name|
       eval <<-EOF
         def #{name} *args
-          fail "Not allowed for \#{field[:type]}" unless field?(String)
-          common_on << [:#{name}, *args]
+          fail "Not allowed for \#{field[:type]}" unless field?(:string)
+          field[:cleaner][:#{name}] = true
         end
       EOF
     }
 
+    def match *args
+      fail "Not allowed for #{field[:type].inspect}" unless field?(:string)
+      field[:cleaner][:match] ||= []
+      field[:cleaner][:match] << args
+    end
+
+    def not_match *args
+      fail "Not allowed for #{field[:type].inspect}" unless field?(:string)
+      field[:cleaner][:match] ||= []
+      field[:cleaner][:match] << args
+      self
+    end
+
     def min i
-      current_field[:min] = Integer(i)
+      field[:min] = Integer(i)
+      field[:cleaner][:min] = true
+      self
     end
 
     def max i
-      current_field[:max] = Integer(i)
+      field[:max] = Integer(i)
+      field[:cleaner][:max] = true
+      self
     end
 
     def within min, max
-      current_on << [:range, Integer(min) - 1, Integer(max) - 1]
-    end
-
-    def min_max min, max
-      current_on << [:range, Integer(min), Integer(max)]
+      field[:within] = [min, max]
+      field[:cleaner][:within] = true
+      self
     end
 
     def create h
