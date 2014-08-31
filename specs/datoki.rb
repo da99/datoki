@@ -7,7 +7,7 @@ describe 'No type' do
         include Datoki
         field(:title) { min 3 }
       }.create :title => '1'
-    }.message.should.match /Title must be at least 3/i
+    }.message.should.match /Title must have a length of at least 3/i
   end
 
   it "fails when Array is less than min:" do

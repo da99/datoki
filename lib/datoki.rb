@@ -59,7 +59,7 @@ module Datoki
         :english_name => name.to_s.freeze,
         :allow        => {},
         :disable      => {},
-        :cleaners     => {},
+        :cleaners     => {:check_required=>true},
         :on           => Actions.inject({}) { |memo, a| memo[a] = []; memo}
       }
 
@@ -167,7 +167,7 @@ module Datoki
       self
     end
 
-    def create h
+    def create h = {}
       r = new
       r.create h
     end
@@ -260,6 +260,7 @@ module Datoki
   def run action
     self.class.fields.each { |f_name, f_meta|
       field_name f_name
+
       field[:cleaners].each { |cleaner, args|
         next if args === false
         next if field[:allow][:nil] && (!new_data.has_key?(field[:name]) || new_data[:name].nil?)
@@ -273,6 +274,9 @@ module Datoki
           else
             fail "Unknown type: #{field[:type].inspect}"
           end
+
+        when :check_required
+          fail!("!English_name is required.") if val.nil? && !field[:allow][:nil]
 
         when :set_to
           args.each { |meth|
@@ -321,7 +325,7 @@ module Datoki
           if target < field[:min]
             err_msg = case
                       when field?(:string) || val.is_a?(String)
-                        "!English_name must be equal or more than !min in length."
+                        "!English_name must have a length of at least !min."
                       when field?(:array) || val.is_a?(Array)
                         "!English_name must have at least !min."
                       else
