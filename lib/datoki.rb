@@ -75,6 +75,12 @@ module Datoki
       self
     end
 
+    def array
+      field[:type] = :array
+      field[:cleaners][:type] = true
+      self
+    end
+
     def string *args
       field[:type] = :string
       field[:min]  ||= 0
@@ -286,10 +292,17 @@ module Datoki
 
         when :type
           case field[:type]
-          when :string
-            fail!("!English_name needs to be a String.") unless val.is_a?(String)
+          when :string, :array, String, Array
+            # do nothing
           else
             fail "Unknown type: #{field[:type].inspect}"
+          end
+
+          case
+          when field?(:string) && !val.is_a?(String)
+            fail! "!English_name needs to be a String."
+          when field?(:array) && !val.is_a?(Array)
+            fail! "!English_name needs to be an Array."
           end
 
         when :check_required

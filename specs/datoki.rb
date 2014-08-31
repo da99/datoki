@@ -142,13 +142,13 @@ end # === describe Datoki ===
 
 describe Array do
 
-  it "fails if Array is not the right size: array x" do
+  it "fails if Array is not the right size: max x" do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
-        field(:title) { array 6 }
-      }.create :keys=>[1,2,3,4]
-    }.message.should.match /must be 6/
+        field(:nicknames) { array; max 6 }
+      }.create :nicknames=>%w{ a b c d e f g h }
+    }.message.should.match /Nicknames has a maximum of 6/
   end
 
 end # === describe Array
