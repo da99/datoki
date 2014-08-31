@@ -47,9 +47,9 @@ describe 'No type' do
     clean_data[:body].should == nil
   end
 
-end # === describe 'No type'
+end # === describe 'No type' ========================================
 
-describe String do
+describe String do # ================================================
 
   it "fails when string is shorter than required length: string x" do
     should.raise(Datoki::Invalid) {
@@ -57,7 +57,7 @@ describe String do
         include Datoki
         field(:name) { string 3 }
       }.create :name=>'1234'
-    }.message.should.match /must be 3 characters long/
+    }.message.should.match /needs to be 3 in length/
   end
 
   it "fails when string is shorter than min: min x" do

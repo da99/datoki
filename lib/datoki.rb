@@ -56,6 +56,7 @@ module Datoki
       fields[name] ||= {
         :name         => name,
         :type         => :unknown,
+        :default      => nil,
         :english_name => name.to_s.freeze,
         :allow        => {},
         :disable      => {},
@@ -79,19 +80,24 @@ module Datoki
       field[:min]  ||= 0
       field[:max]  ||= 255
 
+      field[:cleaners][:type] = true
+
       case args.size
       when 0
         # do nothing else
       when 1
         field[:exact_size] = args.first
+        field[:cleaners][:exact_size] = true
       when 2
         field[:min] = args.first
         field[:max] = args.last
+
+        field[:cleaners][:min] = true
+        field[:cleaners][:max] = true
       else
         fail "Unknown args: #{args.inspect}"
       end
 
-      field[:cleaners][:type] = true
       self
     end
 
@@ -105,6 +111,10 @@ module Datoki
       props.each { |prop|
         field[:cleaners][prop] = false
       }
+    end
+
+    def default val
+      field[:default] = val
     end
 
     def set_to *args
@@ -204,7 +214,7 @@ module Datoki
         self.class.fields[field_name][:english_name].capitalize.gsub('_', ' ')
       when "ENGLISH_NAME"
         self.class.fields[field_name][:english_name].upcase.gsub('_', ' ')
-      when "max", "min"
+      when "max", "min", "exact_size"
         self.class.fields[field_name][name.downcase.to_sym]
       else
         fail "Unknown value: #{name}"
@@ -239,7 +249,7 @@ module Datoki
   end
 
   def val! new_val
-    clean_data[field_name] = args.first
+    clean_data[field_name] = new_val
   end
 
   def field *args
@@ -261,6 +271,10 @@ module Datoki
     self.class.fields.each { |f_name, f_meta|
       field_name f_name
 
+      if !new_data.has_key?(field_name)
+        val! field[:default]
+      end
+
       field[:cleaners].each { |cleaner, args|
         next if args === false
         next if field[:allow][:nil] && (!new_data.has_key?(field[:name]) || new_data[:name].nil?)
@@ -270,13 +284,25 @@ module Datoki
         when :type
           case field[:type]
           when :string
-            fail("!English_name needs to be a String.") unless val.is_a?(String)
+            fail!("!English_name needs to be a String.") unless val.is_a?(String)
           else
             fail "Unknown type: #{field[:type].inspect}"
           end
 
         when :check_required
           fail!("!English_name is required.") if val.nil? && !field[:allow][:nil]
+
+        when :exact_size
+          if val.size != field[:exact_size]
+            case
+            when field?(:string) || val.is_a?(String)
+              fail! "!English_name needs to be !exact_size in length."
+            when field?(:array) || val.is_a?(Array)
+              fail! "!English_name needs to have exactly !exact_size."
+            else
+              fail! "!English_name can only be !exact_size in size."
+            end
+          end
 
         when :set_to
           args.each { |meth|
