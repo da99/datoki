@@ -48,7 +48,7 @@ module Datoki
     end
 
     def field *args
-      return fields[@def_field[:current_field]] if args.empty?
+      return fields[@def_fields[:current_field]] if args.empty?
       return fields[args.first] unless block_given?
 
       name = args.first
@@ -118,8 +118,8 @@ module Datoki
     end
 
     def included_in arr
-      field[:cleaner][:included_in] ||= []
-      field[:cleaner][:included_in].concat arr
+      field[:cleaners][:included_in] ||= []
+      field[:cleaners][:included_in].concat arr
     end
 
     # === String-only methods ===========
@@ -131,39 +131,39 @@ module Datoki
       eval <<-EOF
         def #{name} *args
           fail "Not allowed for \#{field[:type]}" unless field?(:string)
-          field[:cleaner][:#{name}] = true
+          field[:cleaners][:#{name}] = true
         end
       EOF
     }
 
     def match *args
       fail "Not allowed for #{field[:type].inspect}" unless field?(:string)
-      field[:cleaner][:match] ||= []
-      field[:cleaner][:match] << args
+      field[:cleaners][:match] ||= []
+      field[:cleaners][:match] << args
     end
 
     def not_match *args
       fail "Not allowed for #{field[:type].inspect}" unless field?(:string)
-      field[:cleaner][:not_match] ||= []
-      field[:cleaner][:not_match] << args
+      field[:cleaners][:not_match] ||= []
+      field[:cleaners][:not_match] << args
       self
     end
 
     def min i
       field[:min] = Integer(i)
-      field[:cleaner][:min] = true
+      field[:cleaners][:min] = true
       self
     end
 
     def max i
       field[:max] = Integer(i)
-      field[:cleaner][:max] = true
+      field[:cleaners][:max] = true
       self
     end
 
     def within min, max
       field[:within] = [min, max]
-      field[:cleaner][:within] = true
+      field[:cleaners][:within] = true
       self
     end
 
@@ -176,22 +176,35 @@ module Datoki
 
   # ================= Instance Methods ===============
 
-  attr_reader :clean_data
-
-  def initialize data = {}
-    @data       = data
+  def initialize data = nil
+    @data       = nil
     @new_data   = nil
     @field_name = nil
-    super
+    @clean_data = nil
+    @errors     = nil
+  end
+
+  def errors
+    @errors ||= []
+  end
+
+  def clean_data
+    @clean_data ||= {}
+  end
+
+  def new_data
+    @new_data ||= {}
   end
 
   def fail! msg
-    err_msg = msg.gsub(/!([a-z\_\-])/i) { |raw|
+    err_msg = msg.gsub(/!([a-z\_\-]+)/i) { |raw|
       name = $1
       case name
+      when "English_name"
+        self.class.fields[field_name][:english_name].capitalize.gsub('_', ' ')
       when "ENGLISH_NAME"
-        self.class.fields[field_name][:english_name]
-      when "MAX", "MIN"
+        self.class.fields[field_name][:english_name].upcase.gsub('_', ' ')
+      when "max", "min"
         self.class.fields[field_name][name.downcase.to_sym]
       else
         fail "Unknown value: #{name}"
@@ -199,9 +212,9 @@ module Datoki
     }
 
     if self.class.record_errors?
-      @errors << [err_msg, field_name, val]
+      errors << [err_msg, field_name, val]
     else
-      fail Invalid, error_msg
+      fail Invalid, err_msg
     end
   end
 
@@ -232,8 +245,8 @@ module Datoki
   end
 
   def run action
-    self.class.fields.each { |field|
-      field_name field[:name]
+    self.class.fields.each { |f_name, field|
+      field_name f_name
       field[:cleaners].each { |cleaner, args|
         next if args === false
         next if field[:allow][:nil] && (!new_data.has_key?(field[:name]) || new_data[:name].nil?)
@@ -243,7 +256,7 @@ module Datoki
         when :type
           case field[:type]
           when :string
-            fail error_msg("!ENGLISH_NAME needs to be a String.") unless val.is_a?(String)
+            fail("!English_name needs to be a String.") unless val.is_a?(String)
           else
             fail "Unknown type: #{field[:type].inspect}"
           end
@@ -257,12 +270,12 @@ module Datoki
           args.each { |pair|
             meth, msg, other = pair
             target = send(meth)
-            fail!(error_msg(msg || "!ENGLISH_NAME must be equal to: #{target.inspect}")) unless val == target
+            fail!(msg || "!English_name must be equal to: #{target.inspect}") unless val == target
           }
 
         when :included_in
           arr, msg, other = args
-          fail!(msg || "!ENGLISH_NAME must be one of these: #{arr.join ', '}") unless arr.include?(val)
+          fail!(msg || "!English_name must be one of these: #{arr.join ', '}") unless arr.include?(val)
 
         when :strip
           val val.strip
@@ -277,7 +290,7 @@ module Datoki
           args.each { |pair|
             regex, msg, other = pair
             if val !~ regex
-              fail!(msg || "!ENGLISH_NAME must match #{regex.inspect}")
+              fail!(msg || "!English_name must match #{regex.inspect}")
             end
           }
 
@@ -285,23 +298,26 @@ module Datoki
           args.each { |pair|
             regex, msg, other = pair
             if val =~ regex
-              fail!(msg || "!ENGLISH_NAME must not match #{regex.inspect}")
+              fail!(msg || "!English_name must not match #{regex.inspect}")
             end
           }
 
         when :min
-          if val < field[:max]
-            fail!("!ENGLISH_NAME must be equal or more than: !MIN"
+          target = val.is_a?(Numeric) ? val : val.size
+          if target < field[:min]
+            fail! "!English_name must be equal or more than !min"
           end
 
         when :max
-          if val >= field[:max]
-            fail!("!ENGLISH_NAME must be equal or less than: !MAX"
+          target = val.is_a?(Numeric) ? val : val.size
+          if target >= field[:max]
+            fail! "!English_name must be equal or less than !max"
           end
 
         when :within
-          if val < field[:min] || val > field[:max]
-            fail!("!ENGLISH_NAME must be within: !MIN and !MAX"
+          target = val.is_a?(Numeric) ? val : val.size
+          if target < field[:min] || target > field[:max]
+            fail! "!English_name must be within !min and !max"
           end
 
         else
