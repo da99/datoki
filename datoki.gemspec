@@ -26,5 +26,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "bundler"       , "~> 1.5"
   spec.add_development_dependency "bacon"         , "~> 1.0"
   spec.add_development_dependency "Bacon_Colored" , "~> 0.1"
+  spec.add_development_dependency "duck_duck_duck", '~> 0.1'
+
   spec.add_dependency "sequel", '~> 4.12'
 end
