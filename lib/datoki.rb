@@ -92,7 +92,6 @@ module Datoki
       fields[name] ||= {
         :name         => name,
         :type         => :unknown,
-        :default      => nil,
         :english_name => name.to_s.freeze,
         :allow        => {},
         :disable      => {},
@@ -346,32 +345,31 @@ module Datoki
 
   def run action
     self.class.fields.each { |f_name, f_meta|
+
       field_name f_name
+      is_set    = new_data.has_key?(field_name)
+      is_update = action == :update
+      is_nil    = is_set && new_data[field_name].nil?
 
       # === Should the field be skipped? ===============
-      if !new_data.has_key?(field_name) && field[:primary_key]
-        next # because it's a primary key and the DB will set it.
-      end
+      next if !is_set && is_update
+      next if !is_set && field[:primary_key]
+      next if !is_set && field[:default] == :db
+      next if field[:allow][:nil] && (!is_set || is_nil)
 
-      if new_data.has_key?(field_name) && new_data[field_name].nil? && field[:default] == :db
-        new_data.delete field_name
-        next # because the DB will set the value.
-      end
-      # ======================================================
-
-      if new_data.has_key?(field_name)
-        val! new_data[f_name]
-      else
-        if action == :create
-          val! field[:default]
-        end
+      if is_set 
+        val! new_data[field_name]
+      elsif field.has_key?(:default)
+        val! field[:default]
       end
 
       field[:cleaners].each { |cleaner, args|
         next if args === false
-        next if field[:allow][:nil] && (!new_data.has_key?(field[:name]) || new_data[:name].nil?)
 
         case cleaner
+
+        when :check_required
+          fail!("!English_name is required.") if val.nil?
 
         when :type
           case field[:type]
@@ -389,9 +387,6 @@ module Datoki
           when field?(:array) && !val.is_a?(Array)
             fail! "!English_name needs to be an Array."
           end
-
-        when :check_required
-          fail!("!English_name is required.") if val.nil? && !field[:allow][:nil]
 
         when :exact_size
           if val.size != field[:exact_size]
