@@ -1,23 +1,19 @@
 
+describe 'record_errors' do
+
+  it "prevents failing with an exception" do
+    r = Class.new {
+      include Datoki
+      record_errors
+      field(:title) { string }
+    }.create
+
+    r.errors.should == {:title=>{:msg=>'Title is required.', :value=>nil}}
+  end
+
+end # === describe record_errors ====================================
+
 describe 'No type' do
-
-  it "fails when String is less than min:" do
-    should.raise(Datoki::Invalid) {
-      Class.new {
-        include Datoki
-        field(:title) { min 3 }
-      }.create :title => '1'
-    }.message.should.match /Title must be at least 3/i
-  end
-
-  it "fails when Array is less than min:" do
-    should.raise(Datoki::Invalid) {
-      Class.new {
-        include Datoki
-        field(:names) { min 4 }
-      }.create :names => %w{ 1 2 }
-    }.message.should.match /Names must have at least 4/
-  end
 
   it "does not allow nil by default" do
     should.raise(Datoki::Invalid) {
@@ -40,7 +36,7 @@ describe 'No type' do
   it "allows nil if specified" do
     Class.new {
       include Datoki
-      field(:title) { min 2 }
+      field(:title) { string 2, 255 }
       field(:body) { allow :nil }
     }.
     create(:title => 'title', :body => nil).
@@ -49,45 +45,40 @@ describe 'No type' do
 
 end # === describe 'No type' ========================================
 
-describe 'record_errors' do
-
-  it "prevents failing with an exception" do
-    r = Class.new {
-      include Datoki
-      record_errors
-      field(:title) { string }
-    }.create
-
-    r.errors.should == {:title=>{:msg=>'Title is required.', :value=>nil}}
-  end
-
-end # === describe record_errors ====================================
-
 describe String do # ================================================
+
+  it "fails when String is less than min:" do
+    should.raise(Datoki::Invalid) {
+      Class.new {
+        include Datoki
+        field(:title) { string 3, 255 }
+      }.create :title => '1'
+    }.message.should.match /Title must be at least 3/i
+  end
 
   it "fails when string is shorter than required length: string x" do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
-        field(:name) { string 3 }
+        field(:name) { string 3, 255 }
       }.create :name=>'1234'
     }.message.should.match /needs to be 3 in length/
   end
 
-  it "fails when string is shorter than min: min x" do
+  it "fails when string is shorter than min" do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
-        field(:title) { string; min 4 }
+        field(:title) { string 4, 200 }
       }.create :title => '123'
     }.message.should.match /must be at least 4/
   end
 
-  it "fails when string is longer than max: max x" do
+  it "fails when string is longer than max" do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
-        field(:title) { string; max 5 }
+        field(:title) { string 0, 5 }
       }.create :title => '123456'
     }.message.should.match /Title has a maximum length of 5/
   end
@@ -165,6 +156,15 @@ end # === describe Datoki ===
 
 
 describe Array do
+
+  it "fails when Array is less than min:" do
+    should.raise(Datoki::Invalid) {
+      Class.new {
+        include Datoki
+        field(:names) { array 4, 10 }
+      }.create :names => %w{ 1 2 }
+    }.message.should.match /Names must have at least 4/
+  end
 
   it "fails if Array is not the right size: max x" do
     should.raise(Datoki::Invalid) {
@@ -271,8 +271,10 @@ end # === describe Datoki.db
 
 describe "Datoki.db" do
 
-  it "raises exception when their is a :allow_null conflict"
-  it "raises exception when their is a :max_length conflict"
+  it "raises Schema_Conflict when their is a :allow_null conflict"
+  it "raises Schema_Conflict when their is a :max_length conflict"
+  it "raises Schema_Conflict when default value != null and :allow_null = true"
+  it "raises Schema_Conflict if :allow_null = true, and allow(:nil) is not used for confirmation"
 
 end # === describe Datoki.db
 
