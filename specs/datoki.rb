@@ -151,6 +151,16 @@ describe String do # ================================================
     clean_data[:title].should == ' my title '
   end
 
+  it "sets to nil if String is .strip.empty?" do
+    r = Class.new {
+      include Datoki
+      record_errors
+      field(:title) { string; allow :nil }
+    }.create :title => '  '
+
+    r.clean_data[:title].should == nil
+  end
+
 end # === describe Datoki ===
 
 
@@ -177,6 +187,8 @@ describe Integer do
       }.create :age=>0
     }.message.should.match /age must be between 1 and 150/i
   end
+
+  it "raises an exception if value is a non-numeric String."
 
 end # === describe Integer
 
@@ -247,6 +259,13 @@ describe "Datoki.db" do
   it "imports field types into class" do
     @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :integer, :string, :string]
   end
+
+end # === describe Datoki.db
+
+describe "Datoki.db" do
+
+  it "raises exception when their is a :allow_null conflict"
+  it "raises exception when their is a :max_length conflict"
 
 end # === describe Datoki.db
 
