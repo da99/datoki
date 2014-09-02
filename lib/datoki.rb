@@ -152,9 +152,7 @@ module Datoki
       else
         fail "Unknown args: #{args.inspect}"
       end
-
-      self
-    end
+    end # === def
 
     def string *args
       field[:type] = :string
@@ -165,28 +163,31 @@ module Datoki
       field[:cleaners][:strip] = true
 
       case args.size
+
       when 0
         # do nothing else
+
       when 1
         field[:exact_size] = args.first
         field[:cleaners][:exact_size] = true
+
       when 2
         field[:min], field[:max] = args
 
         field[:cleaners][:min] = true
         field[:cleaners][:max] = true
+
       else
         fail "Unknown args: #{args.inspect}"
-      end
 
-      self
-    end
+      end # === case
+    end # === def
 
     def allow *props
       props.each { |prop|
         field[:allow][prop] = true
       }
-    end
+    end # == def
 
     def disable *props
       props.each { |prop|
@@ -378,6 +379,12 @@ module Datoki
         val! new_data[field_name]
       elsif field.has_key?(:default)
         val! field[:default]
+      end
+
+      if field[:type] == :string && field[:allow][:nil] && field[:min] < 1
+        if val.is_a?(String) && val.strip.empty?
+          val! nil
+        end
       end
 
       catch :error_saved do
