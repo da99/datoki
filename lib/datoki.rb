@@ -364,7 +364,7 @@ module Datoki
       end
 
       field[:cleaners].each { |cleaner, args|
-        next if args === false
+        next if args === false # === cleaner has been disabled.
 
         case cleaner
 
