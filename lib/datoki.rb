@@ -66,6 +66,10 @@ module Datoki
             max(meta[:max_length])
           end
 
+          if [:string, :integer].include?(meta[:type]) && !meta.has_key?(:min_length)
+            min 1
+          end
+
           case meta[:type]
           when :string
           when :integer

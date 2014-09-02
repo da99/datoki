@@ -227,20 +227,50 @@ describe "Datoki.db" do
   }
 
   it "imports field names into class" do
-    @klass.fields.keys.should == [:id, :title, :body]
+    @klass.fields.keys.should == [:id, :parent_id, :title, :body]
   end
 
   it "imports field types into class" do
-    @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :string, :string]
+    @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :integer, :string, :string]
   end
 
-  it "imports max length for a string field" do
+end # === describe Datoki.db
+
+describe "Datoki.db :string" do
+
+  before {
+    @klass = Class.new {
+      include Datoki
+      table "datoki_test"
+    }
+  }
+
+  it "imports max length" do
     @klass.fields[:title][:max].should == 123
   end
 
-end # === describe DB
+  it "sets :min to 1" do
+    @klass.fields[:title][:min].should == 1
+  end
 
+end # === describe Datoki.db :string
 
+describe 'Datoki.db :integer' do
+
+  before {
+    reset_db
+
+    @klass = Class.new {
+      include Datoki
+      table "datoki_test"
+    }
+  }
+
+  it "sets :min to 1" do
+    @klass.fields[:parent_id][:min].should == 1
+  end
+
+end # === Datoki.db :integer
 
 
 
