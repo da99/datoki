@@ -153,6 +153,18 @@ describe Array do
 
 end # === describe Array
 
+describe Integer do
+
+  it "fails if Integer is outside the range" do
+    should.raise(Datoki::Invalid) {
+      Class.new {
+        include Datoki
+        field(:age) { integer 1, 150 }
+      }.create :age=>0
+    }.message.should.match /age must be between 1 and 150/i
+  end
+
+end # === describe Integer
 
 describe "on :create" do
 

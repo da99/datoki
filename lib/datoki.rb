@@ -92,6 +92,27 @@ module Datoki
       self
     end
 
+    def integer *args
+      field[:type] = :integer
+      field[:cleaners][:to_i] = true
+      field[:cleaners][:type] = true
+
+      case args.size
+      when 0
+        # do nothing
+      when 1
+        field[:max] = args.first
+        field[:cleaners][:max] = true
+      when 2
+        field[:min], field[:max] = args
+        field[:cleaners][:within] = true
+      else
+        fail "Unknown args: #{args.inspect}"
+      end
+
+      self
+    end
+
     def string *args
       field[:type] = :string
       field[:min]  ||= 0
@@ -107,8 +128,7 @@ module Datoki
         field[:exact_size] = args.first
         field[:cleaners][:exact_size] = true
       when 2
-        field[:min] = args.first
-        field[:max] = args.last
+        field[:min], field[:max] = args
 
         field[:cleaners][:min] = true
         field[:cleaners][:max] = true
@@ -303,13 +323,15 @@ module Datoki
 
         when :type
           case field[:type]
-          when :string, :array, String, Array
+          when :string, :array, :integer, String, Array, Integer
             # do nothing
           else
             fail "Unknown type: #{field[:type].inspect}"
           end
 
           case
+          when field?(:integer) && !val.is_a?(Integer)
+            fail! "!English_name needs to be an integer."
           when field?(:string) && !val.is_a?(String)
             fail! "!English_name needs to be a String."
           when field?(:array) && !val.is_a?(Array)
@@ -407,7 +429,7 @@ module Datoki
         when :within
           target = val.is_a?(Numeric) ? val : val.size
           if target < field[:min] || target > field[:max]
-            fail! "!English_name must be within !min and !max"
+            fail! "!English_name must be between !min and !max"
           end
 
         else
