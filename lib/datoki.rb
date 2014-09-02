@@ -52,6 +52,7 @@ module Datoki
         name, meta = pair
         field name do
 
+          send meta[:type]
           primary_key if meta[:primary_key]
           allow(:nil) if meta[:allow_null]
           default(:db) if meta[:ruby_default] || meta[:default]
