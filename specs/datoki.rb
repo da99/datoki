@@ -203,6 +203,20 @@ describe "on :create" do
 
 end # === describe on :create
 
+describe "on :update" do
+
+  it "does not override old, unset fields with default values" do
+    r = Class.new {
+      include Datoki
+      field(:title) { default 'my title' }
+      field(:body) { default 'my body' }
+    }.new(:title=>'old title')
+    r.update :body=>'new body'
+    r.clean_data.should == {:body=>'new body'}
+  end
+
+end # === describe on :update
+
 describe "Datoki.db" do
 
   it "imports schema into class" do
