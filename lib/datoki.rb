@@ -47,7 +47,7 @@ module Datoki
     end
 
     def table name
-      @schema = db.schema name
+      @schema = Datoki.db.schema name
       @schema.each { |pair|
         name, meta = pair
         field name do

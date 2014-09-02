@@ -219,12 +219,12 @@ end # === describe on :update
 
 describe "Datoki.db" do
 
-  it "imports schema into class" do
+  it "imports field names into class" do
     k = Class.new {
       include Datoki
       table "datoki_test"
     }
-    k.fields.should == {:a=>:b}
+    k.fields.keys.should == [:id, :title, :body]
   end
 
 end # === describe DB

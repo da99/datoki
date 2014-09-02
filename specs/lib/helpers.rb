@@ -18,3 +18,4 @@ def reset_db
   EOF
 end # === def reset_db
 
+reset_db
