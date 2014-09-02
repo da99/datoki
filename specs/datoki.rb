@@ -203,4 +203,20 @@ describe "on :create" do
 
 end # === describe on :create
 
+describe "Datoki.db" do
+
+  it "imports schema into class" do
+    k = Class.new {
+      include Datoki
+      table "datoki_test"
+    }
+    k.fields.should == {:a=>:b}
+  end
+
+end # === describe DB
+
+
+
+
+
 

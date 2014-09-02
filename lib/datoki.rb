@@ -19,6 +19,12 @@ module Datoki
       klass.initialize_def_field
     end
 
+    def db db = :return
+      return @db if db == :return
+      @db = db
+      @tables = @db.tables
+    end
+
   end # === class self ===
 
   module Def_Field
@@ -38,6 +44,35 @@ module Datoki
 
     def record_errors
       @record_errors = true
+    end
+
+    def table name
+      @schema = db.schema name
+      @schema.each { |pair|
+        name, meta = pair
+        field name do
+
+          primary_key if meta[:primary_key]
+          allow(:nil) if meta[:allow_null]
+          default(:db) if meta[:ruby_default] || meta[:default]
+
+          case
+          when meta.has_key?(:min_length) && meta.has_key?(:max_length)
+            within meta[:min_length], meta[:max_length]
+          when meta.has_key?(:min_length)
+            min(meta[:min_length])
+          when meta.has_key?(:max_length)
+            max(meta[:max_length])
+          end
+
+          case meta[:type]
+          when :string
+          when :integer
+          else
+            fail "Unknown db type: #{meta[:type]}"
+          end
+        end # === field
+      }
     end
 
     def fields
@@ -84,6 +119,10 @@ module Datoki
 
     def ons
       @def_fields[:on]
+    end
+
+    def primary_key
+      field[:primary_key] = true
     end
 
     def array
@@ -309,10 +348,23 @@ module Datoki
     self.class.fields.each { |f_name, f_meta|
       field_name f_name
 
+      # === Should the field be skipped? ===============
+      if !new_data.has_key?(field_name) && field[:primary_key]
+        next # because it's a primary key and the DB will set it.
+      end
+
+      if new_data.has_key?(field_name) && new_data[field_name].nil? && field[:default] == :db
+        new_data.delete field_name
+        next # because the DB will set the value.
+      end
+      # ======================================================
+
       if new_data.has_key?(field_name)
         val! new_data[f_name]
       else
-        val! field[:default]
+        if action == :create
+          val! field[:default]
+        end
       end
 
       field[:cleaners].each { |cleaner, args|
