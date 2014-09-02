@@ -279,6 +279,10 @@ module Datoki
     @errors ||= {}
   end
 
+  def errors?
+    @errors && !@errors.empty?
+  end
+
   def save_error msg
     @errors ||= {}
     @errors[field_name] ||= {}
@@ -507,6 +511,8 @@ module Datoki
 
       end # === catch :error_saved
     } # === field
+
+    return if errors?
 
     self.class.ons.each { |action, meths|
       meths.each { |meth, is_enabled|
