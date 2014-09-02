@@ -234,6 +234,10 @@ describe "Datoki.db" do
     @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :string, :string]
   end
 
+  it "imports max length for a string field" do
+    @klass.fields[:title][:max].should == 123
+  end
+
 end # === describe DB
 
 
