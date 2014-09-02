@@ -49,6 +49,20 @@ describe 'No type' do
 
 end # === describe 'No type' ========================================
 
+describe 'record_errors' do
+
+  it "prevents failing with an exception" do
+    r = Class.new {
+      include Datoki
+      record_errors
+      field(:title) { string }
+    }.create
+
+    r.errors.should == {:title=>{:msg=>'Title is required.', :value=>nil}}
+  end
+
+end # === describe record_errors ====================================
+
 describe String do # ================================================
 
   it "fails when string is shorter than required length: string x" do

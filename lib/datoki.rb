@@ -276,7 +276,14 @@ module Datoki
   end
 
   def errors
-    @errors ||= []
+    @errors ||= {}
+  end
+
+  def save_error msg
+    @errors ||= {}
+    @errors[field_name] ||= {}
+    @errors[field_name][:msg] = msg
+    @errors[field_name][:value] = val
   end
 
   def clean_data
@@ -303,7 +310,8 @@ module Datoki
     }
 
     if self.class.record_errors?
-      errors << [err_msg, field_name, val]
+      save_error err_msg
+      throw :error_saved
     else
       fail Invalid, err_msg
     end
@@ -368,139 +376,144 @@ module Datoki
         val! field[:default]
       end
 
-      field[:cleaners].each { |cleaner, args|
-        next if args === false # === cleaner has been disabled.
+      catch :error_saved do
+        field[:cleaners].each { |cleaner, args|
+          next if args === false # === cleaner has been disabled.
 
-        case cleaner
+            case cleaner
 
-        when :check_required
-          fail!("!English_name is required.") if val.nil?
+            when :check_required
+              fail!("!English_name is required.") if val.nil?
 
-        when :type
-          case field[:type]
-          when :string, :array, :integer, String, Array, Integer
-            # do nothing
-          else
-            fail "Unknown type: #{field[:type].inspect}"
-          end
+            when :type
+              case field[:type]
+              when :string, :array, :integer, String, Array, Integer
+                # do nothing
+              else
+                fail "Unknown type: #{field[:type].inspect}"
+              end
 
-          case
-          when field?(:integer) && !val.is_a?(Integer)
-            fail! "!English_name needs to be an integer."
-          when field?(:string) && !val.is_a?(String)
-            fail! "!English_name needs to be a String."
-          when field?(:array) && !val.is_a?(Array)
-            fail! "!English_name needs to be an Array."
-          end
+              case
+              when field?(:integer) && !val.is_a?(Integer)
+                fail! "!English_name needs to be an integer."
+              when field?(:string) && !val.is_a?(String)
+                fail! "!English_name needs to be a String."
+              when field?(:array) && !val.is_a?(Array)
+                fail! "!English_name needs to be an Array."
+              end
 
-        when :exact_size
-          if val.size != field[:exact_size]
-            case
-            when field?(:string) || val.is_a?(String)
-              fail! "!English_name needs to be !exact_size in length."
-            when field?(:array) || val.is_a?(Array)
-              fail! "!English_name needs to have exactly !exact_size."
+            when :exact_size
+              if val.size != field[:exact_size]
+                case
+                when field?(:string) || val.is_a?(String)
+                  fail! "!English_name needs to be !exact_size in length."
+                when field?(:array) || val.is_a?(Array)
+                  fail! "!English_name needs to have exactly !exact_size."
+                else
+                  fail! "!English_name can only be !exact_size in size."
+                end
+              end
+
+            when :set_to
+              args.each { |meth|
+                val! send(meth)
+              }
+
+            when :equal_to
+              args.each { |pair|
+                meth, msg, other = pair
+                target = send(meth)
+                fail!(msg || "!English_name must be equal to: #{target.inspect}") unless val == target
+              }
+
+            when :included_in
+              arr, msg, other = args
+              fail!(msg || "!English_name must be one of these: #{arr.join ', '}") unless arr.include?(val)
+
+            when :strip
+              val! val.strip
+
+            when :upcase
+              val! val.upcase
+
+            when :to_i
+              val! val.to_i
+
+            when :match
+              args.each { |pair|
+                regex, msg, other = pair
+                if val !~ regex
+                  fail!(msg || "!English_name must match #{regex.inspect}")
+                end
+              }
+
+            when :not_match
+              args.each { |pair|
+                regex, msg, other = pair
+                if val =~ regex
+                  fail!(msg || "!English_name must not match #{regex.inspect}")
+                end
+              }
+
+            when :min
+              target = val.is_a?(Numeric) ? val : val.size
+
+              if target < field[:min]
+                err_msg = case
+                          when field?(:string) || val.is_a?(String)
+                            "!English_name must be at least !min in length."
+                          when field?(:array) || val.is_a?(Array)
+                            "!English_name must have at least !min."
+                          else
+                            "!English_name must be at least !min."
+                          end
+
+                fail! err_msg
+              end
+
+            when :max
+              target = val.is_a?(Numeric) ? val : val.size
+
+              if target > field[:max]
+                err_msg = case
+                          when field?(:string) || val.is_a?(String)
+                            "!English_name has a maximum length of !max."
+                          when field?(:array) || val.is_a?(Array)
+                            "!English_name has a maximum of !max."
+                          else
+                            "!English_name can't be more than !max."
+                          end
+
+                fail! err_msg
+              end
+
+            when :within
+              target = val.is_a?(Numeric) ? val : val.size
+              if target < field[:min] || target > field[:max]
+                fail! "!English_name must be between !min and !max"
+              end
+
             else
-              fail! "!English_name can only be !exact_size in size."
-            end
-          end
+              fail "Cleaner not implemented: #{cleaner.inspect}"
+            end # === case cleaner
 
-        when :set_to
-          args.each { |meth|
-            val! send(meth)
-          }
 
-        when :equal_to
-          args.each { |pair|
-            meth, msg, other = pair
-            target = send(meth)
-            fail!(msg || "!English_name must be equal to: #{target.inspect}") unless val == target
-          }
+        } # === field[:cleaners].each
 
-        when :included_in
-          arr, msg, other = args
-          fail!(msg || "!English_name must be one of these: #{arr.join ', '}") unless arr.include?(val)
+        field[:on][action].each { |meth, is_enabled|
+          next unless is_enabled
+          send meth
+        } if field[:on][action]
 
-        when :strip
-          val! val.strip
-
-        when :upcase
-          val! val.upcase
-
-        when :to_i
-          val! val.to_i
-
-        when :match
-          args.each { |pair|
-            regex, msg, other = pair
-            if val !~ regex
-              fail!(msg || "!English_name must match #{regex.inspect}")
-            end
-          }
-
-        when :not_match
-          args.each { |pair|
-            regex, msg, other = pair
-            if val =~ regex
-              fail!(msg || "!English_name must not match #{regex.inspect}")
-            end
-          }
-
-        when :min
-          target = val.is_a?(Numeric) ? val : val.size
-
-          if target < field[:min]
-            err_msg = case
-                      when field?(:string) || val.is_a?(String)
-                        "!English_name must be at least !min in length."
-                      when field?(:array) || val.is_a?(Array)
-                        "!English_name must have at least !min."
-                      else
-                        "!English_name must be at least !min."
-                      end
-
-            fail! err_msg
-          end
-
-        when :max
-          target = val.is_a?(Numeric) ? val : val.size
-
-          if target > field[:max]
-            err_msg = case
-                      when field?(:string) || val.is_a?(String)
-                        "!English_name has a maximum length of !max."
-                      when field?(:array) || val.is_a?(Array)
-                        "!English_name has a maximum of !max."
-                      else
-                        "!English_name can't be more than !max."
-                      end
-
-            fail! err_msg
-          end
-
-        when :within
-          target = val.is_a?(Numeric) ? val : val.size
-          if target < field[:min] || target > field[:max]
-            fail! "!English_name must be between !min and !max"
-          end
-
-        else
-          fail "Cleaner not implemented: #{cleaner.inspect}"
-        end # === case cleaner
-
-      } # === cleaners
-
-      field[:on][action].each { |meth, is_enabled|
-        next unless is_enabled
-        send meth
-      } if field[:on][action]
-
+      end # === catch :error_saved
     } # === field
 
     self.class.ons.each { |action, meths|
       meths.each { |meth, is_enabled|
         next unless is_enabled
-        send meth
+        catch :error_saved do
+          send meth
+        end
       }
     }
   end
