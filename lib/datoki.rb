@@ -387,6 +387,15 @@ module Datoki
         end
       end
 
+      if field[:type] == :integer && val.is_a?(String)
+        clean_val = Integer(val) rescue String
+        if clean_val == String
+          fail! "!English_name must be numeric."
+        else
+          val! clean_val
+        end
+      end
+
       catch :error_saved do
         field[:cleaners].each { |cleaner, args|
           next if args === false # === cleaner has been disabled.

@@ -188,7 +188,14 @@ describe Integer do
     }.message.should.match /age must be between 1 and 150/i
   end
 
-  it "raises an exception if value is a non-numeric String."
+  it "raises an exception if value is a non-numeric String." do
+    should.raise(Datoki::Invalid) {
+      Class.new {
+        include Datoki
+        field(:age) { integer 1, 150 }
+      }.create :age=>'twenty-two'
+    }.message.should.match /age must be numeric/i
+  end
 
 end # === describe Integer
 
