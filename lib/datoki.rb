@@ -318,24 +318,6 @@ module Datoki
       self
     end
 
-    def min i
-      field[:min] = Integer(i)
-      field[:cleaners][:min] = true
-      self
-    end
-
-    def max i
-      field[:max] = Integer(i)
-      field[:cleaners][:max] = true
-      self
-    end
-
-    def within min, max
-      field[:within] = [min, max]
-      field[:cleaners][:within] = true
-      self
-    end
-
     def create h = {}
       r = new
       r.create h
