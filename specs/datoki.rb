@@ -195,6 +195,30 @@ describe Integer do
     }.message.should.match /age must be numeric/i
   end
 
+  it "allows nil" do
+    Class.new {
+      include Datoki
+      field(:age) { integer nil, 1, 99 }
+    }.create(:age=>nil).
+    clean_data[:age].should == nil
+  end
+
+  it "allows nil in an array" do
+    Class.new {
+      include Datoki
+      field(:age) { integer [nil, 1,2,3,4] }
+    }.create(:age=>nil).
+    clean_data[:age].should == nil
+  end
+
+  it "allows to specify an array of possible values" do
+    Class.new {
+      include Datoki
+      field(:age) { integer [1,2,3,4] }
+    }.create(:age=>2).
+    clean_data[:age].should == 2
+  end
+
 end # === describe Integer
 
 describe "on :create" do

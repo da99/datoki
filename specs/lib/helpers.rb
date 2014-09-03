@@ -5,6 +5,8 @@ require 'pry'
 require 'sequel'
 
 DB = Sequel.connect ENV['DATABASE_URL']
+DB.cache_schema = false
+
 Datoki.db DB
 
 def reset_db sql = nil
