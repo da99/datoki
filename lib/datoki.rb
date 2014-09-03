@@ -8,6 +8,7 @@ module Datoki
   UTC_NOW      = ::Sequel.lit("timezone('UTC'::text, now())")
 
   Invalid = Class.new RuntimeError
+  Schema_Conflict = Class.new RuntimeError
 
   Actions = [:all, :create, :read, :update, :update_or_create, :trash, :delete]
   Types   = [:string, :integer, :array]
@@ -44,6 +45,13 @@ module Datoki
 
     def record_errors
       @record_errors = true
+    end
+
+    def schema
+      @schema ||= begin
+                    table self.to_s.downcase.to_sym
+                    @schema
+                  end
     end
 
     def table name
@@ -100,15 +108,58 @@ module Datoki
         :english_name => name.to_s.freeze,
         :allow        => {},
         :disable      => {},
-        :cleaners     => {:check_required=>true},
+        :cleaners     => {},
         :on           => {}
       }
 
       @def_fields[:current_field] = name
       yield
-      validate_field_schema
+      ensure_schema_match
       @def_fields[:current_field] = nil
     end
+
+    def ensure_schema_match
+      name = field[:name]
+
+      db_schema = schema[name]
+
+      # === match :text
+      db_type = db_schema[:type]
+      type = field[:type]
+      if db_type != type
+        fail Schema_Conflict, ":type => #{db_type.inspect} != #{type.inspect}"
+      end
+
+      # === match :max_length
+      db_max   = db_schema[:max_length]
+      max = field[:max]
+      if !db_max.nil? && db_max != max
+        fail Schema_Conflict, ":max_length => #{db_max.inspect} != #{max.inspect}"
+      end
+
+      # === match :min_length
+      db_min   = db_schema[:min_length]
+      min = field[:min]
+      if !db_min.nil? && db_min != min
+        fail Schema_Conflict, ":min_length => #{db_min.inspect} != #{min.inspect}"
+      end
+
+      # === match :allow_null
+      if db_schema[:allow_null] != field[:allow][:nil]
+        fail Schema_Conflict, ":allow_null => #{db_schema[:allow_null].inspect} != #{field[:allow][:nil].inspect}"
+      end
+
+      # === match default
+      db_default = db_schema[:default]
+      default = field[:default]
+      if (db_default.is_a?(String) || db_default.is_a?(Numeric))
+        if (default.is_a?(String) || default.is_a?(Numeric))
+          if db_default != default
+            fail Schema_Conflict, ":default => #{db_default.inspect} != #{default.inspect}"
+          end
+        end
+      end
+    end # === def ensure_schema_match
 
     def on action, meth_name_sym
       fail "Invalid action: #{action.inspect}" unless Actions.include? action
@@ -133,38 +184,66 @@ module Datoki
     def integer *args
       field[:type] = :integer
 
-      case args.size
-      when 0
+      case args.map(&:class)
+
+      when []
         # do nothing
-      when 1
+
+      when [NilClass]
+        field[:allow][:nil] = true
+
+      when [NilClass, Integer]
+        field[:allow][:nil] = true
+        field[:max] = args.last
+
+      when [NilClass, Integer, Integer]
+        field[:allow][:nil] = true
+        field[:min] = args[-2]
+        field[:max] = args.last
+
+      when [Array]
+        field[:options] = args.first
+
+      when [Integer]
         field[:max] = args.first
-      when 2
+
+      when [Integer, Integer]
         field[:min], field[:max] = args
+
       else
         fail "Unknown args: #{args.inspect}"
-      end
+
+      end # === case
     end # === def
 
     def string *args
-      fail "Field type already set: #{field[:type].inspect}" unless ([nil, :string].include? field[:type])
       field[:type]             = :string
       field[:cleaners][:strip] = true
+      field[:min]  ||= 1
+      field[:max]  ||= 255
 
-      case args.size
+      case args.map(&:class)
 
-      when 0
-        field[:min]  ||= 0
-        field[:max]  ||= 255
+      when []
+        # do nothing
 
-      when 1
-        field[:exact_size] = args.first
-        field[:cleaners][:exact_size] = true
+      when [NilClass]
+        field[:allow][:nil] = true
 
-      when 2
+      when [NilClass, Integer]
+        field[:allow][:nil] = true
+        field[:max] = args.last
+
+      when [NilClass, Integer, Integer]
+        field[:allow][:nil] = true
+        field[:min] = args[-2]
+        field[:max] = args.last
+
+      when [Integer]
+        field[:max] = args.last
+
+      when [Integer, Integer]
         field[:min], field[:max] = args
-
-        field[:cleaners][:min] = true
-        field[:cleaners][:max] = true
 
       else
         fail "Unknown args: #{args.inspect}"
@@ -413,16 +492,13 @@ module Datoki
       if field?(:string) && field[:cleaners][:strip] && val.is_a?(String)
         val! val.strip
       end
-
       # ================================
+
       catch :error_saved do
         field[:cleaners].each { |cleaner, args|
           next if args === false # === cleaner has been disabled.
 
             case cleaner
-
-            when :check_required
-              fail!("!English_name is required.") if val.nil?
 
             when :type
               case field[:type]
