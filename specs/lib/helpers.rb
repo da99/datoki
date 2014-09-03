@@ -14,7 +14,6 @@ def reset_db sql = nil
   sql ||= <<-EOF
       CREATE TABLE "datoki_test" (
         id serial NOT NULL PRIMARY KEY,
-        parent_id smallint NOT NULL,
         title varchar(123) NOT NULL,
         body  text
       );

@@ -106,6 +106,7 @@ module Datoki
 
       @def_fields[:current_field] = name
       yield
+      validate_field_schema
       @def_fields[:current_field] = nil
     end
 
@@ -129,43 +130,31 @@ module Datoki
       field[:primary_key] = true
     end
 
-    def array
-      field[:type] = :array
-      field[:cleaners][:type] = true
-      self
-    end
-
     def integer *args
       field[:type] = :integer
-      field[:cleaners][:to_i] = true
-      field[:cleaners][:type] = true
 
       case args.size
       when 0
         # do nothing
       when 1
         field[:max] = args.first
-        field[:cleaners][:max] = true
       when 2
         field[:min], field[:max] = args
-        field[:cleaners][:within] = true
       else
         fail "Unknown args: #{args.inspect}"
       end
     end # === def
 
     def string *args
-      field[:type] = :string
-      field[:min]  ||= 0
-      field[:max]  ||= 255
-
-      field[:cleaners][:type] = true
+      fail "Field type already set: #{field[:type].inspect}" unless ([nil, :string].include? field[:type])
+      field[:type]             = :string
       field[:cleaners][:strip] = true
 
       case args.size
 
       when 0
-        # do nothing else
+        field[:min]  ||= 0
+        field[:max]  ||= 255
 
       when 1
         field[:exact_size] = args.first
@@ -181,6 +170,7 @@ module Datoki
         fail "Unknown args: #{args.inspect}"
 
       end # === case
+
     end # === def
 
     def allow *props
@@ -396,6 +386,35 @@ module Datoki
         end
       end
 
+      # === check type =================
+      case field[:type]
+      when :string
+      when :integer
+      when nil
+        # do nothing
+      else
+        fail "Unknown type: #{field[:type].inspect}"
+      end
+      # ================================
+
+      # === check min, max, range ======
+      if field.keys & [:min, :max, :range].freeze
+        check_min_max_or_range
+      end
+      # ================================
+
+      # === to_i if necessary ==========
+      if field?(:integer)
+        val! val.to_i
+      end
+      # ================================
+
+      # === :strip if necessary ========
+      if field?(:string) && field[:cleaners][:strip] && val.is_a?(String)
+        val! val.strip
+      end
+
+      # ================================
       catch :error_saved do
         field[:cleaners].each { |cleaner, args|
           next if args === false # === cleaner has been disabled.
@@ -450,14 +469,8 @@ module Datoki
               arr, msg, other = args
               fail!(msg || "!English_name must be one of these: #{arr.join ', '}") unless arr.include?(val)
 
-            when :strip
-              val! val.strip
-
             when :upcase
               val! val.upcase
-
-            when :to_i
-              val! val.to_i
 
             when :match
               args.each { |pair|

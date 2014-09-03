@@ -282,7 +282,7 @@ describe "Datoki.db" do
   }
 
   it "imports field names into class" do
-    @klass.fields.keys.should == [:id, :parent_id, :title, :body]
+    @klass.fields.keys.should == [:id, :title, :body]
   end
 
   it "imports field types into class" do
@@ -323,15 +323,21 @@ describe 'Datoki.db :integer' do
 
   before {
     reset_db
-
-    @klass = Class.new {
-      include Datoki
-      table "datoki_test"
-    }
   }
 
   it "sets :min to 1" do
-    @klass.fields[:parent_id][:min].should == 1
+    DB << <<-EOF
+      CREATE TABLE "datoki_test" (
+        id serial NOT NULL PRIMARY KEY,
+        parent_id smallint NOT NULL,
+        title varchar(123) NOT NULL,
+        body  text
+      );
+    EOF
+    Class.new {
+      include Datoki
+      table "datoki_test"
+    }.fields[:parent_id][:min].should == 1
   end
 
 end # === Datoki.db :integer
