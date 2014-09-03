@@ -217,10 +217,11 @@ module Datoki
     end # === def
 
     def string *args
-      field[:type]             = :string
-      field[:cleaners][:strip] = true
+      field[:type]   = :string
       field[:min]  ||= 1
       field[:max]  ||= 255
+
+      default_enable :strip
 
       case args.map(&:class)
 
@@ -261,6 +262,13 @@ module Datoki
     def disable *props
       props.each { |prop|
         field[:cleaners][prop] = false
+      }
+    end
+
+    def default_enable *props
+      props.each { |prop|
+        next if field[:cleaners].has_key?(prop)
+        field[:cleaners][prop] = true
       }
     end
 
