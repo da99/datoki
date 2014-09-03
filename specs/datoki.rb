@@ -37,9 +37,8 @@ describe 'No type' do
     Class.new {
       include Datoki
       field(:title) { string 2, 255 }
-      field(:body) { allow :nil }
-    }.
-    create(:title => 'title', :body => nil).
+      field(:body) { string nil }
+    }.create(:title => 'title', :body => nil).
     clean_data[:body].should == nil
   end
 
@@ -99,8 +98,7 @@ describe String do # ================================================
     r = Class.new {
       include Datoki
       field(:title) {
-        string
-        allow :nil
+        string nil
       }
     }.create()
     r.clean_data[:title].should == nil
@@ -146,7 +144,7 @@ describe String do # ================================================
     r = Class.new {
       include Datoki
       record_errors
-      field(:title) { string; allow :nil }
+      field(:title) { string nil }
     }.create :title => '  '
 
     r.clean_data[:title].should == nil
