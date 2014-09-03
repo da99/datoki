@@ -150,7 +150,7 @@ module Datoki
       end
 
       # === match default
-      db_default = db_schema[:default]
+      db_default = db_schema[:ruby_default]
       default = field[:default]
       if (db_default.is_a?(String) || db_default.is_a?(Numeric))
         if (default.is_a?(String) || default.is_a?(Numeric))

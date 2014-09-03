@@ -293,10 +293,57 @@ end # === describe Datoki.db
 
 describe "Datoki.db" do
 
-  it "raises Schema_Conflict when their is a :allow_null conflict"
-  it "raises Schema_Conflict when their is a :max_length conflict"
-  it "raises Schema_Conflict when default value != null and :allow_null = true"
-  it "raises Schema_Conflict if :allow_null = true, and allow(:nil) is not used for confirmation"
+  before {
+    CACHE[:schema_conflict] ||= begin
+                                  reset_db <<-EOF
+                                    CREATE TABLE "datoki_test" (
+                                      id     serial NOT NULL PRIMARY KEY,
+                                      title  varchar(123),
+                                      body   varchar(255) NOT NULL,
+                                      created_at  timestamp with time zone NOT NULL DEFAULT timezone('UTC'::text, now())
+                                    );
+                                  EOF
+                                end
+  }
+
+  it "raises Schema_Conflict when there is a datoki allows null, but db doesn not" do
+    should.raise(Datoki::Schema_Conflict) {
+      Class.new {
+        include Datoki
+        field(:body) { string nil, 1, 255 }
+      }
+    }.message.should.match /Schema conflict allow null: true != false/i
+  end
+
+  it "raises Schema_Conflict when there is a :max_length conflict" do
+    should.raise(Datoki::Schema_Conflict) {
+      Class.new {
+        include Datoki
+        field(:title) { string 1, 200 }
+      }
+    }.message.should.match /Schema_Conflict in :max: 123 => 200/i
+  end
+
+  it "raises Schema_Conflict when db default value is not (stringy, numeric) and datoki default is a different class" do
+    should.raise(Datoki::Schema_Conflict) {
+      Class.new {
+        include Datoki
+        field(:created_at) {
+          type "timestamp with time zone"
+          default "hello"
+        }
+      }
+    }.message.should.match /Schema conflict in default: default != default/i
+  end
+
+  it "raises Schema_Conflict if :allow_null = true, and allow(:nil) is not called" do
+    should.raise(Datoki::Schema_Conflict) {
+      Class.new {
+        include Datoki
+        field(:title) { string 1, 123 }
+      }
+    }.message.should.match /schema conflict: :allow_null != :allow :nil/i
+  end
 
 end # === describe Datoki.db
 

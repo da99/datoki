@@ -8,6 +8,7 @@ DB = Sequel.connect ENV['DATABASE_URL']
 DB.cache_schema = false
 
 Datoki.db DB
+CACHE = {}
 
 def reset_db sql = nil
   DB << "DROP TABLE IF EXISTS \"datoki_test\";"
