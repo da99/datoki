@@ -192,11 +192,11 @@ module Datoki
       when [NilClass]
         field[:allow][:nil] = true
 
-      when [NilClass, Integer]
+      when [NilClass, FixNum]
         field[:allow][:nil] = true
         field[:max] = args.last
 
-      when [NilClass, Integer, Integer]
+      when [NilClass, FixNum, FixNum]
         field[:allow][:nil] = true
         field[:min] = args[-2]
         field[:max] = args.last
@@ -204,10 +204,10 @@ module Datoki
       when [Array]
         field[:options] = args.first
 
-      when [Integer]
+      when [FixNum]
         field[:max] = args.first
 
-      when [Integer, Integer]
+      when [FixNum, FixNum]
         field[:min], field[:max] = args
 
       else
@@ -230,19 +230,19 @@ module Datoki
       when [NilClass]
         field[:allow][:nil] = true
 
-      when [NilClass, Integer]
+      when [NilClass, FixNum]
         field[:allow][:nil] = true
         field[:max] = args.last
 
-      when [NilClass, Integer, Integer]
+      when [NilClass, FixNum, FixNum]
         field[:allow][:nil] = true
         field[:min] = args[-2]
         field[:max] = args.last
 
-      when [Integer]
+      when [FixNum]
         field[:max] = args.last
 
-      when [Integer, Integer]
+      when [FixNum, FixNum]
         field[:min], field[:max] = args
 
       else
