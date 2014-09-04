@@ -83,8 +83,8 @@ module Datoki
         meta = fields[name]
         fail "Unknown field: #{name.inspect}" unless meta
         return true if args.include?(meta[:type])
-        return true if args.include?(:chars) && Char_Types.include?(field[:type])
-        args.include?(:numeric) && Numeric_Types.include?(field[:type])
+        return true if args.include?(:chars) && Char_Types.include?(meta[:type])
+        args.include?(:numeric) && Numeric_Types.include?(meta[:type])
       else
         fail "Unknown arg: #{target.inspect}"
       end

@@ -26,7 +26,7 @@ describe 'No type' do
 
 end # === describe 'No type' ========================================
 
-describe varchar do # ================================================
+describe :varchar do # ================================================
 
   it "requires field by default" do
     should.raise(Datoki::Invalid) {
