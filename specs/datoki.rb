@@ -134,13 +134,13 @@ describe varchar do # ================================================
 
 end # === describe Datoki ===
 
-describe Integer do
+describe Numeric do
 
-  it "fails if Integer is outside the range" do
+  it "fails if number is outside the range" do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
-        field(:age) { integer 1, 150 }
+        field(:age) { smallint 1, 150 }
       }.create :age=>0
     }.message.should.match /age must be between 1 and 150/i
   end
@@ -149,7 +149,7 @@ describe Integer do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
-        field(:age) { integer 1, 150 }
+        field(:age) { smallint 1, 150 }
       }.create :age=>'twenty-two'
     }.message.should.match /age must be numeric/i
   end
@@ -157,7 +157,7 @@ describe Integer do
   it "allows nil" do
     Class.new {
       include Datoki
-      field(:age) { integer nil, 1, 99 }
+      field(:age) { smallint nil, 1, 99 }
     }.create(:age=>nil).
     clean_data[:age].should == nil
   end
@@ -165,7 +165,7 @@ describe Integer do
   it "allows nil in an array" do
     Class.new {
       include Datoki
-      field(:age) { integer [nil, 1,2,3,4] }
+      field(:age) { smallint [nil, 1,2,3,4] }
     }.create(:age=>nil).
     clean_data[:age].should == nil
   end
@@ -173,7 +173,7 @@ describe Integer do
   it "allows to specify an Array of possible values" do
     Class.new {
       include Datoki
-      field(:age) { integer [1,2,3,4] }
+      field(:age) { smallint [1,2,3,4] }
     }.create(:age=>2).
     clean_data[:age].should == 2
   end
@@ -182,12 +182,12 @@ describe Integer do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
-        field(:num) { integer [1,2,3,4] }
+        field(:num) { smallint [1,2,3,4] }
       }.create :num=>0
     }.message.should.match /Num can only be: 1, 2, 3, 4/
   end
 
-end # === describe Integer
+end # === describe Numeric
 
 describe "on :create" do
 
@@ -364,10 +364,10 @@ describe "Datoki.db :varchar" do
 
 end # === describe Datoki.db :varchar
 
-describe 'Datoki.db :integer' do
+describe 'Datoki.db number' do
 
   before {
-    CACHE[:datoki_db_integer] ||= begin
+    CACHE[:datoki_db_number] ||= begin
                                     reset_db <<-EOF
                                       CREATE TABLE "datoki_test" (
                                         id serial NOT NULL PRIMARY KEY,
@@ -388,7 +388,7 @@ describe 'Datoki.db :integer' do
     c.fields[:parent_id][:min].should == 1
   end
 
-end # === Datoki.db :integer
+end # === Datoki.db number
 
 
 

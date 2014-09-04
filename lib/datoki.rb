@@ -294,6 +294,17 @@ module Datoki
 
     end # === def
 
+    def enable *props
+      props.each { |prop|
+        case prop
+        when :strip, :nil
+          field[:allow][prop] = true
+        else
+          field[:cleaners][prop] = true
+        end
+      }
+    end
+
     def disable *props
       props.each { |prop|
         case prop
