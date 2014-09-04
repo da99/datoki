@@ -60,23 +60,21 @@ module Datoki
         name, meta = pair
         field name do
 
-          send meta[:type]
+
+          type_args = case
+                      when [:string, :integer].include?(meta[:type])
+                        [ (meta[:min_length] || 1), meta[:max_length]].compact
+                      else
+                        []
+                      end
+          if meta[:allow_null]
+            type_args.unshift nil
+          end
+
+          send(meta[:type], *type_args)
+
           primary_key if meta[:primary_key]
-          allow(:nil) if meta[:allow_null]
           default(:db) if meta[:ruby_default] || meta[:default]
-
-          case
-          when meta.has_key?(:min_length) && meta.has_key?(:max_length)
-            within meta[:min_length], meta[:max_length]
-          when meta.has_key?(:min_length)
-            min(meta[:min_length])
-          when meta.has_key?(:max_length)
-            max(meta[:max_length])
-          end
-
-          if [:string, :integer].include?(meta[:type]) && !meta.has_key?(:min_length)
-            min 1
-          end
 
           case meta[:type]
           when :string
