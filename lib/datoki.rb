@@ -73,28 +73,30 @@ module Datoki
 
     def import_field_from_db
       name = @def_fields[:current_field]
-      meta = schema(name)
+      db_schema = schema(name)
       type_args = case
-                  when [:string, :integer].include?(meta[:type])
-                    [ (meta[:min_length] || 1), meta[:max_length]].compact
+                  when [:string, :integer].include?(db_schema[:type])
+                    [ (db_schema[:min_length] || 1), db_schema[:max_length]].compact
                   else
                     []
                   end
-      if meta[:allow_null]
+      if db_schema[:allow_null]
         type_args.unshift nil
       end
 
-      send(meta[:type], *type_args)
+      send(db_schema[:type], *type_args)
 
-      primary_key if meta[:primary_key]
-      default(:db) if meta[:ruby_default] || meta[:default]
+      primary_key if db_schema[:primary_key]
+      default(:db) if db_schema[:ruby_default] || db_schema[:default]
 
-      case meta[:type]
+      case db_schema[:type]
       when :string
       when :integer
       else
-        fail "Unknown db type: #{meta[:type]}"
+        fail "Unknown db type: #{db_schema[:type]}"
       end
+
+      field[:imported] = true
     end
 
     def fields
@@ -121,15 +123,16 @@ module Datoki
       return fields[@def_fields[:current_field]] if args.empty?
       return fields[args.first] unless block_given?
 
-      do_import = !fields.has_key?(args.first)
-
       name = args.first
 
-      fields[name] ||= {
+      fail "#{name.inspect} already defined." if fields[name]
+
+      fields[name] = {
         :name         => name,
         :type         => :unknown,
         :english_name => name.to_s.freeze,
         :allow        => {:nil => false},
+        :imported     => false,
         :disable      => {},
         :cleaners     => {},
         :on           => {}
@@ -137,7 +140,7 @@ module Datoki
 
       @def_fields[:current_field] = name
 
-      import_field_from_db if do_import
+      import_field_from_db unless @schema.empty?
 
       yield
 
