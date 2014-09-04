@@ -152,7 +152,6 @@ module Datoki
         end
 
         primary_key if db_schema[:primary_key]
-        default(:db) if db_schema[:ruby_default] || db_schema[:default]
       end # === import from db schema
 
       if field? :chars
@@ -195,12 +194,6 @@ module Datoki
           fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
         end
 
-        # === match default
-        db_default = db_schema[:ruby_default]
-        default = field[:default]
-        if default != :db && db_default != default
-          fail Schema_Conflict, ":default: #{db_default.inspect} != #{default.inspect}"
-        end
       end # === ensure schema match
 
       if field?(:chars) && field[:allow][:null] && field.has_key?(:min) && field[:min] < 1
@@ -469,7 +462,6 @@ module Datoki
       # === Should the field be skipped? ===============
       next if !is_set && is_update
       next if !is_set && field[:primary_key]
-      next if !is_set && field[:default] == :db
       next if field[:allow][:null] && (!is_set || is_nil)
 
       if is_set 
