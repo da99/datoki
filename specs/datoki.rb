@@ -244,8 +244,18 @@ end # === describe on :update
 describe "Datoki.db" do
 
   before {
+
+    CACHE[:datoki_db_test] ||= reset_db <<-EOF
+      CREATE TABLE "datoki_test" (
+        id serial NOT NULL PRIMARY KEY,
+        title varchar(123) NOT NULL,
+        body  text DEFAULT 'hello'
+      );
+    EOF
+
     @klass = Class.new {
       include Datoki
+      record_errors
       table "datoki_test"
     }
   }
@@ -258,9 +268,14 @@ describe "Datoki.db" do
     @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :string, :string]
   end
 
+  it "removes field from :clean_data if set to nil and database has a default value" do
+    r = @klass.create :title=>'hello', :body=>nil
+    r.clean_data.keys.should == [:title]
+  end
+
 end # === describe Datoki.db
 
-describe "Datoki.db" do
+describe "Datoki.db Schema_Conflict" do
 
   before {
     CACHE[:schema_conflict] ||= begin
@@ -275,10 +290,11 @@ describe "Datoki.db" do
                                 end
   }
 
-  it "raises Schema_Conflict when there is a datoki allows null, but db doesn not" do
+  it "raises Schema_Conflict when specified to allow nil, but db doesn not" do
     should.raise(Datoki::Schema_Conflict) {
       Class.new {
         include Datoki
+        table :datoki_test
         field(:body) { string nil, 1, 255 }
       }
     }.message.should.match /Schema conflict allow null: true != false/i
@@ -288,6 +304,7 @@ describe "Datoki.db" do
     should.raise(Datoki::Schema_Conflict) {
       Class.new {
         include Datoki
+        table :datoki_test
         field(:title) { string 1, 200 }
       }
     }.message.should.match /Schema_Conflict in :max: 123 => 200/i
@@ -297,6 +314,7 @@ describe "Datoki.db" do
     should.raise(Datoki::Schema_Conflict) {
       Class.new {
         include Datoki
+        table :datoki_test
         field(:created_at) {
           type "timestamp with time zone"
           default "hello"
@@ -309,6 +327,7 @@ describe "Datoki.db" do
     should.raise(Datoki::Schema_Conflict) {
       Class.new {
         include Datoki
+        table :datoki_test
         field(:title) { string 1, 123 }
       }
     }.message.should.match /schema conflict: :allow_null != :allow :nil/i
