@@ -248,6 +248,7 @@ module Datoki
       when [Array]
         field[:options] = args.first
         enable(:null) if field[:options].include? nil
+        disable :min, :max
 
       when [NilClass]
         enable :null
@@ -288,6 +289,8 @@ module Datoki
     def disable *props
       props.each { |prop|
         case prop
+        when :min, :max
+          field.delete prop
         when :strip, :null
           field[:allow][prop] = false
         else
