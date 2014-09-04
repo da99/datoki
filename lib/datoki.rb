@@ -224,6 +224,9 @@ module Datoki
 
       when [Array]
         field[:options] = args.first
+        if field[:options].include? nil
+          allow :nil
+        end
 
       when [Fixnum]
         field[:max] = args.first
