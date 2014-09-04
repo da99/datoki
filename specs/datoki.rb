@@ -268,7 +268,7 @@ describe "Datoki.db" do
   end
 
   it "imports field types into class" do
-    @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :varchar, :varchar]
+    @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :varchar, :text]
   end
 
   it "removes field from :clean_data if set to nil and database has a default value" do
@@ -280,7 +280,7 @@ describe "Datoki.db" do
     Class.new {
       include Datoki
       table :datoki_test
-      field(:body) { varchar 1, 123 }
+      field(:body) {  }
     }.fields[:body][:allow][:null].should == true
   end
 
