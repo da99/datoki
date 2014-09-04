@@ -221,8 +221,7 @@ module Datoki
       field[:type]   = :string
       field[:min]  ||= 1
       field[:max]  ||= 255
-
-      default_enable :strip
+      (field[:strip] = true) unless field.has_key?(:strip)
 
       case args.map(&:class)
 
@@ -262,7 +261,12 @@ module Datoki
 
     def disable *props
       props.each { |prop|
-        field[:cleaners][prop] = false
+        case prop
+        when :strip
+          field[:strip] = false
+        else
+          field[:cleaners][prop] = false
+        end
       }
     end
 
@@ -294,7 +298,6 @@ module Datoki
 
     # === String-only methods ===========
     %w{
-      strip
       upcase
       to_i
     }.each { |name|
@@ -511,7 +514,7 @@ module Datoki
       # ================================
 
       # === :strip if necessary ========
-      if field?(:string) && field[:cleaners][:strip] && val.is_a?(String)
+      if field?(:string) && field[:strip] && val.is_a?(String)
         val! val.strip
       end
       # ================================
