@@ -196,12 +196,8 @@ module Datoki
       # === match default
       db_default = db_schema[:ruby_default]
       default = field[:default]
-      if (db_default.is_a?(String) || db_default.is_a?(Numeric))
-        if (default.is_a?(String) || default.is_a?(Numeric))
-          if db_default != default
-            fail Schema_Conflict, ":default => #{db_default.inspect} != #{default.inspect}"
-          end
-        end
+      if default != :db && db_default != default
+        fail Schema_Conflict, ":default: #{db_default.inspect} != #{default.inspect}"
       end
     end # === def ensure_schema_match
 
