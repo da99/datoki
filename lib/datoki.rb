@@ -105,7 +105,7 @@ module Datoki
         :name         => name,
         :type         => :unknown,
         :english_name => name.to_s.freeze,
-        :allow        => {:nil => false},
+        :allow        => {:null => false},
         :disable      => {},
         :cleaners     => {},
         :on           => {}
@@ -214,45 +214,6 @@ module Datoki
       field[:primary_key] = true
     end
 
-    def integer *args
-      binding.pry
-      field[:type] = :integer
-
-      case args.map(&:class)
-
-      when []
-        # do nothing
-
-      when [NilClass]
-        field[:allow][:nil] = true
-
-      when [NilClass, Fixnum]
-        field[:allow][:nil] = true
-        field[:max] = args.last
-
-      when [NilClass, Fixnum, Fixnum]
-        field[:allow][:nil] = true
-        field[:min] = args[-2]
-        field[:max] = args.last
-
-      when [Array]
-        field[:options] = args.first
-        if field[:options].include? nil
-          allow :nil
-        end
-
-      when [Fixnum]
-        field[:max] = args.first
-
-      when [Fixnum, Fixnum]
-        field[:min], field[:max] = args
-
-      else
-        fail "Unknown args: #{args.inspect}"
-
-      end # === case
-    end # === def
-
     Types.each { |name|
       eval <<-EOF
         def #{name} *args
@@ -269,11 +230,15 @@ module Datoki
       when []
         # do nothing
 
+      when [Array]
+        field[:options] = args.first
+        enable(:nil) if field[:options].include? nil
+
       when [NilClass]
-        field[:allow][:nil] = true
+        enable :nil
 
       when [NilClass, Fixnum]
-        field[:allow][:nil] = true
+        enable :nil
         field[:min] = args.last
 
       when [NilClass, Fixnum, Fixnum]

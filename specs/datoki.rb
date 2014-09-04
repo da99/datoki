@@ -37,13 +37,13 @@ describe varchar do # ================================================
     }.message.should.match /Title is required/i
   end
 
-  it "raises RuntimeError if allow :nil and :min = 0" do
+  it "raises RuntimeError if allow :null and :min = 0" do
     should.raise(RuntimeError) {
       Class.new {
         include Datoki
         field(:name) { varchar nil, 0, 50 }
       }
-    }.message.should.match /varchar can't be both: allow :nil && :min = 0/
+    }.message.should.match /varchar can't be both: allow :null && :min = 0/
   end
 
   it "fails when varchar is less than min: varchar x, y" do
@@ -281,7 +281,7 @@ describe "Datoki.db" do
       include Datoki
       table :datoki_test
       field(:body) { varchar 1, 123 }
-    }.fields[:body][:allow][:nil].should == true
+    }.fields[:body][:allow][:null].should == true
   end
 
 end # === describe Datoki.db
