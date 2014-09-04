@@ -134,29 +134,6 @@ describe String do # ================================================
 
 end # === describe Datoki ===
 
-
-describe Array do
-
-  it "fails when Array is less than min:" do
-    should.raise(Datoki::Invalid) {
-      Class.new {
-        include Datoki
-        field(:names) { array 4, 10 }
-      }.create :names => %w{ 1 2 }
-    }.message.should.match /Names must have at least 4/
-  end
-
-  it "fails if Array is not the right size: max x" do
-    should.raise(Datoki::Invalid) {
-      Class.new {
-        include Datoki
-        field(:nicknames) { array; max 6 }
-      }.create :nicknames=>%w{ a b c d e f g h }
-    }.message.should.match /Nicknames has a maximum of 6/
-  end
-
-end # === describe Array
-
 describe Integer do
 
   it "fails if Integer is outside the range" do
