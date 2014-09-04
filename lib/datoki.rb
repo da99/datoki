@@ -237,6 +237,7 @@ module Datoki
 
       if field?(:chars)
         field[:max] ||= 255
+        enable :strip
       end
 
       case args.map(&:class)
