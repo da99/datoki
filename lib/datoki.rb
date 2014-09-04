@@ -215,6 +215,10 @@ module Datoki
       field[:primary_key] = true
     end
 
+    def text *args
+      type :text, *args
+    end
+
     Types.each { |name|
       eval <<-EOF
         def #{name} *args
@@ -227,8 +231,12 @@ module Datoki
       field[:type] = name
       disable :null
 
-      if !field.has_key?(:min) && (field?(:chars) || field?(:numeric))
-        field[:min] = 1
+      if field?(:chars) || field?(:numeric)
+        field[:min] ||= 1
+      end
+
+      if field?(:chars)
+        field[:max] ||= 255
       end
 
       case args.map(&:class)
