@@ -15,31 +15,13 @@ end # === describe record_errors ====================================
 
 describe 'No type' do
 
-  it "does not allow nil by default" do
-    should.raise(Datoki::Invalid) {
+  it "requires type to be specified" do
+    should.raise(RuntimeError) {
       Class.new {
         include Datoki
-        field(:body) { }
-      }.create :body => nil
-    }.message.should.match /Body is required/i
-  end
-
-  it "requires field by default" do
-    should.raise(Datoki::Invalid) {
-      Class.new {
-        include Datoki
-        field(:title) { }
-      }.create
-    }.message.should.match /Title is required/i
-  end
-
-  it "allows nil if specified" do
-    Class.new {
-      include Datoki
-      field(:title) { string 2, 255 }
-      field(:body) { string nil }
-    }.create(:title => 'title', :body => nil).
-    clean_data[:body].should == nil
+        field(:title) {  }
+      }
+    }.message.should.match /Type not specified/
   end
 
 end # === describe 'No type' ========================================

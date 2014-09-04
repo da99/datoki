@@ -114,6 +114,9 @@ module Datoki
 
       @def_fields[:current_field] = name
       yield
+      if field[:type] == :unknown
+        fail "Type not specified."
+      end
       ensure_schema_match
       @def_fields[:current_field] = nil
     end
