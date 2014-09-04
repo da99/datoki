@@ -255,7 +255,7 @@ describe "Datoki.db" do
   end
 
   it "imports field types into class" do
-    @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :integer, :string, :string]
+    @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :string, :string]
   end
 
 end # === describe Datoki.db
