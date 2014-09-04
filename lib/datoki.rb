@@ -192,7 +192,7 @@ module Datoki
       end # === ensure schema match
 
       if field?(:chars) && field[:allow][:null] && field[:min] < 1
-        fail "String can't be both: allow :null && :min = #{field[:min]}"
+        fail "#{field[:type].inspect} can't be both: allow :null && :min = #{field[:min]}"
       end
 
       @current_field = nil
