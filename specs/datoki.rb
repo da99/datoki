@@ -46,6 +46,15 @@ end # === describe 'No type' ========================================
 
 describe String do # ================================================
 
+  it "requires field by default" do
+    should.raise(Datoki::Invalid) {
+      Class.new {
+        include Datoki
+        field(:title) { string }
+      }.create
+    }.message.should.match /Title is required/i
+  end
+
   it "fails when String is less than min:" do
     should.raise(Datoki::Invalid) {
       Class.new {

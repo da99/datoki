@@ -450,76 +450,83 @@ module Datoki
         end
       end
 
-      if field[:type] == :integer && val.is_a?(String)
-        clean_val = Integer(val) rescue String
-        if clean_val == String
-          fail! "!English_name must be numeric."
-        else
-          val! clean_val
-        end
-      end
-
-      # === check type =================
-      case field[:type]
-      when :string
-      when :integer
-      when nil
-        # do nothing
-      else
-        fail "Unknown type: #{field[:type].inspect}"
-      end
-      # ================================
-
-      # === check min, max ======
-      if val.is_a?(String) || val.is_a?(Numeric)
-        case [field[:min], field[:max]].map(&:class)
-
-        when [NilClass, NilClass]
-          # do nothing
-
-        when [NilClass, FixNum]
-          case
-          when val.is_a?(String) && val.size > field[:max]
-            fail! "!English_name can't be longer than !max characters."
-          when val.is_a?(Numeric) && val > field[:max]
-            fail! "!English_name can't be higher than !max."
-          end
-
-        when [FixNum, NilClass]
-          case
-          when val.is_a?(String) && val.size < field[:min]
-            fail! "!English_name can't be shorter than !min characters."
-          when val.is_a?(Numeric) && val < field[:min]
-            fail! "!English_name can't be less than !min."
-          end
-
-        when [FixNum, FixNum]
-          case
-          when val.is_a?(String) && (val.size < field[:min] || val.size > field[:max])
-            fail! "!English_name has to be between !min && !max characters."
-          when val.is_a?(Numeric) && (val < field[:min] || val > field[:max])
-            fail! "!English_name has to be between !min && !max."
-          end
-
-        else
-          fail "Unknown values for :min, :max: #{field[:min].inspect}, #{field[:max].inspect}"
-        end
-      end # === if
-      # ================================
-
-      # === to_i if necessary ==========
-      if field?(:integer)
-        val! val.to_i
-      end
-      # ================================
-
-      # === :strip if necessary ========
-      if field?(:string) && field[:strip] && val.is_a?(String)
-        val! val.strip
-      end
-      # ================================
-
       catch :error_saved do
+
+        if field[:type] == :integer && val.is_a?(String)
+          clean_val = Integer(val) rescue String
+          if clean_val == String
+            fail! "!English_name must be numeric."
+          else
+            val! clean_val
+          end
+        end
+
+        # === check type =================
+        case field[:type]
+        when :string
+        when :integer
+        when nil
+          # do nothing
+        else
+          fail "Unknown type: #{field[:type].inspect}"
+        end
+        # ================================
+
+        # === check required. ============
+        if val.nil? && !field[:allow][:nil]
+          fail! "!English_name is required."
+        end
+        # ================================
+
+        # === check min, max ======
+        if val.is_a?(String) || val.is_a?(Numeric)
+          case [field[:min], field[:max]].map(&:class)
+
+          when [NilClass, NilClass]
+            # do nothing
+
+          when [NilClass, FixNum]
+            case
+            when val.is_a?(String) && val.size > field[:max]
+              fail! "!English_name can't be longer than !max characters."
+            when val.is_a?(Numeric) && val > field[:max]
+              fail! "!English_name can't be higher than !max."
+            end
+
+          when [FixNum, NilClass]
+            case
+            when val.is_a?(String) && val.size < field[:min]
+              fail! "!English_name can't be shorter than !min characters."
+            when val.is_a?(Numeric) && val < field[:min]
+              fail! "!English_name can't be less than !min."
+            end
+
+          when [FixNum, FixNum]
+            case
+            when val.is_a?(String) && (val.size < field[:min] || val.size > field[:max])
+              fail! "!English_name has to be between !min && !max characters."
+            when val.is_a?(Numeric) && (val < field[:min] || val > field[:max])
+              fail! "!English_name has to be between !min && !max."
+            end
+
+          else
+            fail "Unknown values for :min, :max: #{field[:min].inspect}, #{field[:max].inspect}"
+          end
+        end # === if
+        # ================================
+
+        # === to_i if necessary ==========
+        if field?(:integer)
+          val! val.to_i
+        end
+        # ================================
+
+        # === :strip if necessary ========
+        if field?(:string) && field[:strip] && val.is_a?(String)
+          val! val.strip
+        end
+        # ================================
+
         field[:cleaners].each { |cleaner, args|
           next if args === false # === cleaner has been disabled.
 
