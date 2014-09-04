@@ -468,9 +468,40 @@ module Datoki
       # ================================
 
       # === check min, max ======
-      if field.keys & [:min, :max].freeze
-        check_min_max_or_range
-      end
+      if val.is_a?(String) || val.is_a?(Numeric)
+        case [field[:min], field[:max]].map(&:class)
+
+        when [NilClass, NilClass]
+          # do nothing
+
+        when [NilClass, FixNum]
+          case
+          when val.is_a?(String) && val.size > field[:max]
+            fail! "!English_name can't be longer than !max characters."
+          when val.is_a?(Numeric) && val > field[:max]
+            fail! "!English_name can't be higher than !max."
+          end
+
+        when [FixNum, NilClass]
+          case
+          when val.is_a?(String) && val.size < field[:min]
+            fail! "!English_name can't be shorter than !min characters."
+          when val.is_a?(Numeric) && val < field[:min]
+            fail! "!English_name can't be less than !min."
+          end
+
+        when [FixNum, FixNum]
+          case
+          when val.is_a?(String) && (val.size < field[:min] || val.size > field[:max])
+            fail! "!English_name has to be between !min && !max characters."
+          when val.is_a?(Numeric) && (val < field[:min] || val > field[:max])
+            fail! "!English_name has to be between !min && !max."
+          end
+
+        else
+          fail "Unknown values for :min, :max: #{field[:min].inspect}, #{field[:max].inspect}"
+        end
+      end # === if
       # ================================
 
       # === to_i if necessary ==========
