@@ -11,7 +11,7 @@ module Datoki
   Schema_Conflict = Class.new RuntimeError
 
   Actions = [:all, :create, :read, :update, :update_or_create, :trash, :delete]
-  Types   = [:string, :integer, :array]
+  Types   = [:string, :integer]
 
   class << self
 
@@ -84,7 +84,12 @@ module Datoki
         type_args.unshift nil
       end
 
-      send(db_schema[:type], *type_args)
+      if Datoki::Types.include?(db_schema[:type])
+        send(db_schema[:type], *type_args)
+      else
+        type db_schema[:type]
+        allow(:nil) if type_args.include?(nil)
+      end
 
       primary_key if db_schema[:primary_key]
       default(:db) if db_schema[:ruby_default] || db_schema[:default]
@@ -92,8 +97,9 @@ module Datoki
       case db_schema[:type]
       when :string
       when :integer
+      when :datetime
       else
-        fail "Unknown db type: #{db_schema[:type]}"
+        fail "Unknown db type: #{db_schema[:type].inspect}"
       end
 
       field[:imported] = true
@@ -256,6 +262,10 @@ module Datoki
 
       end # === case
     end # === def
+
+    def type name
+      field[:type] = name
+    end
 
     def string *args
       field[:type]   = :string

@@ -257,6 +257,9 @@ describe "Datoki.db" do
       include Datoki
       record_errors
       table "datoki_test"
+      field(:id) { }
+      field(:title) { }
+      field(:body) { }
     }
   }
 
@@ -307,7 +310,7 @@ describe "Datoki.db Schema_Conflict" do
         table :datoki_test
         field(:title) { string 1, 200 }
       }
-    }.message.should.match /:max: 123 => 200/i
+    }.message.should.match /:max_length: 123 != 200/i
   end
 
   it "raises Schema_Conflict when db default value is not (stringy, numeric) and datoki default is a different class" do
@@ -316,7 +319,6 @@ describe "Datoki.db Schema_Conflict" do
         include Datoki
         table :datoki_test
         field(:created_at) {
-          type "timestamp with time zone"
           default "hello"
         }
       }
