@@ -92,10 +92,20 @@ module Datoki
       @def_fields[:fields]
     end
 
-    def field? o
-      field[:type] == o || begin
-        o == :chars && [:string, :text, :chars].include?(field[:type])
+    def inspect_field? target, name, *args
+      case target
+      when :type
+        meta = fields[name]
+        fail "Unknown field: #{name.inspect}" unless meta
+        return true if args.include?(meta[:type])
+        args.include?(:chars) && [:string, :text, :chars].include?(field[:type])
+      else
+        fail "Unknown arg: #{target.inspect}"
       end
+    end
+
+    def field? *args
+      inspect_field?(:type, field[:name], *args)
     end
 
     def field *args
@@ -430,8 +440,8 @@ module Datoki
     end
   end
 
-  def field? class_or_sym
-    field[:type] == class_or_sym
+  def field? *args
+    slef.class.inspect_field? :type, field_name, *args
   end
 
   def run action
