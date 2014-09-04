@@ -358,8 +358,12 @@ describe "Datoki.db :varchar" do
     @klass.fields[:title][:max].should == 123
   end
 
-  it "sets :min to 1" do
+  it "sets :min to 1 (by default, during import, if NOT NULL)" do
     @klass.fields[:title][:min].should == 1
+  end
+
+  it "does not set :min = 1 (by default, during import, if :allow_null = true)" do
+    @klass.fields[:body].should.not.has_key :min
   end
 
 end # === describe Datoki.db :varchar
