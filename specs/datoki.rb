@@ -263,6 +263,10 @@ describe "Datoki.db" do
     }
   }
 
+  it "requires field if value = null and default = null and :allow_null = false"
+  it "requires field if :required = true"
+  it "does not turn strip.empty? strings into nulls"
+
   it "imports field names into class" do
     @klass.fields.keys.should == [:id, :title, :body]
   end
