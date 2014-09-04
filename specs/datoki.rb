@@ -5,7 +5,7 @@ describe 'record_errors' do
     r = Class.new {
       include Datoki
       record_errors
-      field(:title) { string }
+      field(:title) { varchar }
     }.create
 
     r.errors.should == {:title=>{:msg=>'Title is required.', :value=>nil}}
@@ -26,13 +26,13 @@ describe 'No type' do
 
 end # === describe 'No type' ========================================
 
-describe String do # ================================================
+describe varchar do # ================================================
 
   it "requires field by default" do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
-        field(:title) { string }
+        field(:title) { varchar }
       }.create
     }.message.should.match /Title is required/i
   end
@@ -41,46 +41,46 @@ describe String do # ================================================
     should.raise(RuntimeError) {
       Class.new {
         include Datoki
-        field(:name) { string nil, 0, 50 }
+        field(:name) { varchar nil, 0, 50 }
       }
-    }.message.should.match /String can't be both: allow :nil && :min = 0/
+    }.message.should.match /varchar can't be both: allow :nil && :min = 0/
   end
 
-  it "fails when String is less than min: string x, y" do
+  it "fails when varchar is less than min: varchar x, y" do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
-        field(:title) { string 3, 255 }
+        field(:title) { varchar 3, 255 }
       }.create :title => '1'
     }.message.should.match /Title must be between 3 and 255 characters/i
   end
 
-  it "fails when string is longer than max" do
+  it "fails when varchar is longer than max" do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
-        field(:title) { string 0, 5 }
+        field(:title) { varchar 0, 5 }
       }.create :title => '123456'
     }.message.should.match /Title must be between 0 and 5 characters/
   end
 
-  it "fails when string does not match pattern: match /../" do
+  it "fails when varchar does not match pattern: match /../" do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
         field :title do
-          string
+          varchar
           match /^[a-zA-Z0-9]+$/i, "Title must be only: alphanumeric"
         end
       }.create :title => '$! title'
     }.message.should.match /Title must be only: alphanumeric/
   end
 
-  it "allows String to be nil" do
+  it "allows varchar to be nil" do
     r = Class.new {
       include Datoki
       field(:title) {
-        string nil
+        varchar nil
       }
     }.create()
     r.clean_data[:title].should == nil
@@ -90,7 +90,7 @@ describe String do # ================================================
     Class.new {
       include Datoki
       field(:title) {
-        string
+        varchar
         set_to :custom_error
         def custom_error
           'Custom title'
@@ -101,20 +101,20 @@ describe String do # ================================================
     clean_data[:title].should.match /Custom title/
   end
 
-  it "strips strings by default" do
+  it "strips varchars by default" do
     Class.new {
       include Datoki
-      field(:title) { string }
+      field(:title) { varchar }
     }.
     create(:title => ' my title ').
     clean_data[:title].should == 'my title'
   end
 
-  it "can prevent string from being stripped" do
+  it "can prevent varchar from being stripped" do
     Class.new {
       include Datoki
       field(:title) {
-        string
+        varchar
         disable :strip
       }
     }.
@@ -122,11 +122,11 @@ describe String do # ================================================
     clean_data[:title].should == ' my title '
   end
 
-  it "sets to nil if String is .strip.empty?" do
+  it "sets to nil if varchar is .strip.empty?" do
     r = Class.new {
       include Datoki
       record_errors
-      field(:title) { string nil }
+      field(:title) { varchar nil }
     }.create :title => '  '
 
     r.clean_data[:title].should == nil
@@ -145,7 +145,7 @@ describe Integer do
     }.message.should.match /age must be between 1 and 150/i
   end
 
-  it "raises an exception if value is a non-numeric String." do
+  it "raises an exception if value is a non-numeric varchar." do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
@@ -200,9 +200,9 @@ describe "on :create" do
         clean_data[:values] = clean_data.values.join ', '
       end
 
-      field(:title) { string; default 'default title' }
+      field(:title) { varchar; default 'default title' }
 
-      field(:body) { string; default 'default body' }
+      field(:body) { varchar; default 'default body' }
 
     }.
     create.
@@ -217,7 +217,7 @@ describe "on :create" do
           clean_data[:body] << ' with new stuff'
         end
 
-        string
+        varchar
         default 'default body'
       }
     }.
@@ -232,8 +232,8 @@ describe "on :update" do
   it "does not override old, unset fields with default values" do
     r = Class.new {
       include Datoki
-      field(:title) { string; default 'my title' }
-      field(:body) { string; default 'my body' }
+      field(:title) { varchar; default 'my title' }
+      field(:body) { varchar; default 'my body' }
     }.new(:title=>'old title')
     r.update :body=>'new body'
     r.clean_data.should == {:body=>'new body'}
@@ -268,7 +268,7 @@ describe "Datoki.db" do
   end
 
   it "imports field types into class" do
-    @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :string, :string]
+    @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :varchar, :varchar]
   end
 
   it "removes field from :clean_data if set to nil and database has a default value" do
@@ -280,7 +280,7 @@ describe "Datoki.db" do
     Class.new {
       include Datoki
       table :datoki_test
-      field(:body) { string 1, 123 }
+      field(:body) { varchar 1, 123 }
     }.fields[:body][:allow][:nil].should == true
   end
 
@@ -306,7 +306,7 @@ describe "Datoki.db Schema_Conflict" do
       Class.new {
         include Datoki
         table :datoki_test
-        field(:body) { string nil, 1, 255 }
+        field(:body) { varchar nil, 1, 255 }
       }
     }.message.should.match /:allow_null: false != true/i
   end
@@ -316,12 +316,12 @@ describe "Datoki.db Schema_Conflict" do
       Class.new {
         include Datoki
         table :datoki_test
-        field(:title) { string 1, 200 }
+        field(:title) { varchar 1, 200 }
       }
     }.message.should.match /:max_length: 123 != 200/i
   end
 
-  it "raises Schema_Conflict when db default value is not (stringy, numeric) and datoki default is a different class" do
+  it "raises Schema_Conflict when db default value is not (varchary, numeric) and datoki default is a different class" do
     should.raise(Datoki::Schema_Conflict) {
       Class.new {
         include Datoki
@@ -335,10 +335,10 @@ describe "Datoki.db Schema_Conflict" do
 
 end # === describe Datoki.db
 
-describe "Datoki.db :string" do
+describe "Datoki.db :varchar" do
 
   before {
-    CACHE[:datoki_db_string] ||= reset_db <<-EOF
+    CACHE[:datoki_db_varchar] ||= reset_db <<-EOF
       CREATE TABLE "datoki_test" (
         id serial NOT NULL PRIMARY KEY,
         title varchar(123) NOT NULL,
@@ -362,7 +362,7 @@ describe "Datoki.db :string" do
     @klass.fields[:title][:min].should == 1
   end
 
-end # === describe Datoki.db :string
+end # === describe Datoki.db :varchar
 
 describe 'Datoki.db :integer' do
 
@@ -380,11 +380,12 @@ describe 'Datoki.db :integer' do
   }
 
   it "sets :min to 1" do
-    Class.new {
+    c = Class.new {
       include Datoki
       table "datoki_test"
       field(:parent_id) {}
-    }.fields[:parent_id][:min].should == 1
+    }
+    c.fields[:parent_id][:min].should == 1
   end
 
 end # === Datoki.db :integer

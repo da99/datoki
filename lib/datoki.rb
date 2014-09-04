@@ -10,8 +10,10 @@ module Datoki
   Invalid = Class.new RuntimeError
   Schema_Conflict = Class.new RuntimeError
 
-  Actions = [:all, :create, :read, :update, :update_or_create, :trash, :delete]
-  Types   = [:string, :integer]
+  Actions       = [:all, :create, :read, :update, :update_or_create, :trash, :delete]
+  Char_Types    = [:varchar, :text]
+  Numeric_Types = [:smallint, :integer, :bigint, :decimal, :numeric]
+  Types         = Char_Types + Numeric_Types
 
   class << self
 
@@ -30,15 +32,15 @@ module Datoki
 
   module Def_Field
 
+    attr_reader :ons, :fields
+
     def initialize_def_field
       @record_errors = false
-      @def_fields = {
-        :on            => {},
-        :fields        => {},
-        :current_field => nil
-      }
+      @ons           = {}
+      @fields        = {}
+      @current_field = nil
+      @schema        = {}
       name = self.to_s.downcase.to_sym
-      @schema = {}
       table(name) if Datoki.db.tables.include?(name)
     end
 
@@ -50,19 +52,6 @@ module Datoki
       @record_errors = true
     end
 
-    def schema *args
-      case args.size
-      when 0
-        @schema 
-      when 1
-        result = @schema[args.first]
-        fail "Unknown field: #{args.first.inspect}" unless result
-        result
-      else
-        fail "Unknown args: #{args.inspect}"
-      end
-    end
-
     def table name
       @schema = {}
       Datoki.db.schema(name).each { |pair|
@@ -71,42 +60,21 @@ module Datoki
       schema
     end
 
-    def import_field_from_db
-      name = @def_fields[:current_field]
-      db_schema = schema(name)
-      type_args = case
-                  when [:string, :integer].include?(db_schema[:type])
-                    [ (db_schema[:min_length] || 1), db_schema[:max_length]].compact
-                  else
-                    []
-                  end
-      if db_schema[:allow_null]
-        type_args.unshift nil
-      end
+    def schema *args
+      case args.size
 
-      if Datoki::Types.include?(db_schema[:type])
-        send(db_schema[:type], *type_args)
+      when 0
+        @schema 
+
+      when 1
+        result = @schema[args.first]
+        fail "Unknown field: #{args.first.inspect}" unless result
+        result
+
       else
-        type db_schema[:type]
-        allow(:nil) if type_args.include?(nil)
+        fail "Unknown args: #{args.inspect}"
+
       end
-
-      primary_key if db_schema[:primary_key]
-      default(:db) if db_schema[:ruby_default] || db_schema[:default]
-
-      case db_schema[:type]
-      when :string
-      when :integer
-      when :datetime
-      else
-        fail "Unknown db type: #{db_schema[:type].inspect}"
-      end
-
-      field[:imported] = true
-    end
-
-    def fields
-      @def_fields[:fields]
     end
 
     def inspect_field? target, name, *args
@@ -115,7 +83,7 @@ module Datoki
         meta = fields[name]
         fail "Unknown field: #{name.inspect}" unless meta
         return true if args.include?(meta[:type])
-        args.include?(:chars) && [:string, :text, :chars].include?(field[:type])
+        args.include?(:chars) && Char_Types.include?(field[:type])
       else
         fail "Unknown arg: #{target.inspect}"
       end
@@ -126,7 +94,7 @@ module Datoki
     end
 
     def field *args
-      return fields[@def_fields[:current_field]] if args.empty?
+      return fields[@current_field] if args.empty?
       return fields[args.first] unless block_given?
 
       name = args.first
@@ -138,68 +106,97 @@ module Datoki
         :type         => :unknown,
         :english_name => name.to_s.freeze,
         :allow        => {:nil => false},
-        :imported     => false,
         :disable      => {},
         :cleaners     => {},
         :on           => {}
       }
 
-      @def_fields[:current_field] = name
+      @current_field = name
 
-      import_field_from_db unless @schema.empty?
+      unless @schema.empty? # === import from db schema
+        db_schema = schema(@current_field)
+
+        field[:type] = if Datoki::Types.include?( db_schema[:db_type].to_sym )
+                         db_schema[:db_type].to_sym
+                       elsif db_schema[:db_type]['character varying']
+                         :varchar
+                       else
+                         db_schema[:type]
+                       end
+
+        if db_schema[:allow_null]
+          field[:allow][:nil] = true
+        end
+
+        if db_schema.has_key?(:min_length)
+          field[:min] = db_schema[:min_length]
+        end
+
+        if db_schema.has_key?(:max_length)
+          field[:max] = db_schema[:max_length]
+        end
+
+        primary_key if db_schema[:primary_key]
+        default(:db) if db_schema[:ruby_default] || db_schema[:default]
+
+        fail("Unknown db type: #{db_schema[:db_type].inspect}") unless Types.include?(field[:type])
+      end # === import from db schema
+
+      if field? :chars
+        field[:allow][:strip] = true
+      end
 
       yield
 
       fail("Type not specified.") if field[:type] == :unknown
 
-      ensure_schema_match
+      # === Ensure schema matches with field definition:
+      unless @schema.empty?
+        name = field[:name]
+
+        db_schema = schema name
+
+        # === match :text
+        db_type = db_schema[:type]
+        type = field[:type]
+        if db_type != type
+          fail Schema_Conflict, ":type: #{db_type.inspect} != #{type.inspect}"
+        end
+
+        # === match :max_length
+        db_max   = db_schema[:max_length]
+        max = field[:max]
+        if !db_max.nil? && db_max != max
+          fail Schema_Conflict, ":max_length: #{db_max.inspect} != #{max.inspect}"
+        end
+
+        # === match :min_length
+        db_min   = db_schema[:min_length]
+        min = field[:min]
+        if !db_min.nil? && db_min != min
+          fail Schema_Conflict, ":min_length: #{db_min.inspect} != #{min.inspect}"
+        end
+
+        # === match :allow_null
+        if db_schema[:allow_null] != field[:allow][:nil]
+          fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:nil].inspect}"
+        end
+
+        # === match default
+        db_default = db_schema[:ruby_default]
+        default = field[:default]
+        if default != :db && db_default != default
+          fail Schema_Conflict, ":default: #{db_default.inspect} != #{default.inspect}"
+        end
+      end # === ensure schema match
 
       if field?(:chars) && field[:allow][:nil] && field[:min] < 1
         fail "String can't be both: allow :nil && :min = #{field[:min]}"
       end
 
-      @def_fields[:current_field] = nil
-    end
+      @current_field = nil
+    end # === def field
 
-    def ensure_schema_match
-      return nil if @schema.empty?
-      name = field[:name]
-
-      db_schema = schema name
-
-      # === match :text
-      db_type = db_schema[:type]
-      type = field[:type]
-      if db_type != type
-        fail Schema_Conflict, ":type: #{db_type.inspect} != #{type.inspect}"
-      end
-
-      # === match :max_length
-      db_max   = db_schema[:max_length]
-      max = field[:max]
-      if !db_max.nil? && db_max != max
-        fail Schema_Conflict, ":max_length: #{db_max.inspect} != #{max.inspect}"
-      end
-
-      # === match :min_length
-      db_min   = db_schema[:min_length]
-      min = field[:min]
-      if !db_min.nil? && db_min != min
-        fail Schema_Conflict, ":min_length: #{db_min.inspect} != #{min.inspect}"
-      end
-
-      # === match :allow_null
-      if db_schema[:allow_null] != field[:allow][:nil]
-        fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:nil].inspect}"
-      end
-
-      # === match default
-      db_default = db_schema[:ruby_default]
-      default = field[:default]
-      if default != :db && db_default != default
-        fail Schema_Conflict, ":default: #{db_default.inspect} != #{default.inspect}"
-      end
-    end # === def ensure_schema_match
 
     def on action, meth_name_sym
       fail "Invalid action: #{action.inspect}" unless Actions.include? action
@@ -207,14 +204,10 @@ module Datoki
         field[:on][action] ||= {}
         field[:on][action][meth_name_sym] = true
       else
-        @def_fields[:on][action] ||= {}
-        @def_fields[:on][action][meth_name_sym] = true
+        @ons[action] ||= {}
+        @ons[action][meth_name_sym] = true
       end
       self
-    end
-
-    def ons
-      @def_fields[:on]
     end
 
     def primary_key
@@ -222,6 +215,7 @@ module Datoki
     end
 
     def integer *args
+      binding.pry
       field[:type] = :integer
 
       case args.map(&:class)
@@ -259,15 +253,16 @@ module Datoki
       end # === case
     end # === def
 
-    def type name
-      field[:type] = name
-    end
+    Types.each { |name|
+      eval <<-EOF
+        def #{name} *args
+          type :#{name}, *args
+        end
+      EOF
+    }
 
-    def string *args
-      field[:type]   = :string
-      field[:min]  ||= 1
-      field[:max]  ||= 255
-      (field[:strip] = true) unless field.has_key?(:strip)
+    def type name, *args
+      field[:type] = name
 
       case args.map(&:class)
 
@@ -279,7 +274,7 @@ module Datoki
 
       when [NilClass, Fixnum]
         field[:allow][:nil] = true
-        field[:max] = args.last
+        field[:min] = args.last
 
       when [NilClass, Fixnum, Fixnum]
         field[:allow][:nil] = true
@@ -287,7 +282,7 @@ module Datoki
         field[:max] = args.last
 
       when [Fixnum]
-        field[:max] = args.last
+        field[:min] = args.first
 
       when [Fixnum, Fixnum]
         field[:min], field[:max] = args
@@ -299,17 +294,11 @@ module Datoki
 
     end # === def
 
-    def allow *props
-      props.each { |prop|
-        field[:allow][prop] = true
-      }
-    end # == def
-
     def disable *props
       props.each { |prop|
         case prop
-        when :strip
-          field[:strip] = false
+        when :strip, :nil
+          field[:allow][prop] = false
         else
           field[:cleaners][prop] = false
         end
@@ -490,7 +479,7 @@ module Datoki
         val! field[:default]
       end
 
-      if val.is_a?(String) && field[:strip]
+      if val.is_a?(String) && field[:allow][:strip]
         val! val.strip
       end
 
@@ -570,7 +559,7 @@ module Datoki
         # ================================
 
         # === :strip if necessary ========
-        if field?(:string) && field[:strip] && val.is_a?(String)
+        if field?(:string) && field[:allow][:strip] && val.is_a?(String)
           val! val.strip
         end
         # ================================
