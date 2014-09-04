@@ -350,6 +350,7 @@ end # === describe Datoki.db
 describe "Datoki.db :string" do
 
   before {
+    CACHE[:datoki_db_string] ||= reset_db
     @klass = Class.new {
       include Datoki
       table "datoki_test"
@@ -369,18 +370,19 @@ end # === describe Datoki.db :string
 describe 'Datoki.db :integer' do
 
   before {
-    reset_db
+    CACHE[:datoki_db_integer] ||= begin
+                                    reset_db <<-EOF
+                                      CREATE TABLE "datoki_test" (
+                                        id serial NOT NULL PRIMARY KEY,
+                                        parent_id smallint NOT NULL,
+                                        title varchar(123) NOT NULL,
+                                        body  text
+                                      );
+                                    EOF
+                                  end
   }
 
   it "sets :min to 1" do
-    DB << <<-EOF
-      CREATE TABLE "datoki_test" (
-        id serial NOT NULL PRIMARY KEY,
-        parent_id smallint NOT NULL,
-        title varchar(123) NOT NULL,
-        body  text
-      );
-    EOF
     Class.new {
       include Datoki
       table "datoki_test"

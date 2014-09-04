@@ -37,6 +37,9 @@ module Datoki
         :fields        => {},
         :current_field => nil
       }
+      name = self.to_s.downcase.to_sym
+      @schema = {}
+      table(name) if Datoki.db.tables.include?(name)
     end
 
     def record_errors?
@@ -48,10 +51,7 @@ module Datoki
     end
 
     def schema
-      @schema ||= begin
-                    table self.to_s.downcase.to_sym
-                    @schema
-                  end
+      @schema 
     end
 
     def table name
@@ -119,6 +119,7 @@ module Datoki
     end
 
     def ensure_schema_match
+      return nil if @schema.empty?
       name = field[:name]
 
       db_schema = schema[name]
@@ -466,8 +467,8 @@ module Datoki
       end
       # ================================
 
-      # === check min, max, range ======
-      if field.keys & [:min, :max, :range].freeze
+      # === check min, max ======
+      if field.keys & [:min, :max].freeze
         check_min_max_or_range
       end
       # ================================
