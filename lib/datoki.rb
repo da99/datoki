@@ -196,11 +196,11 @@ module Datoki
       when [NilClass]
         field[:allow][:nil] = true
 
-      when [NilClass, FixNum]
+      when [NilClass, Fixnum]
         field[:allow][:nil] = true
         field[:max] = args.last
 
-      when [NilClass, FixNum, FixNum]
+      when [NilClass, Fixnum, Fixnum]
         field[:allow][:nil] = true
         field[:min] = args[-2]
         field[:max] = args.last
@@ -208,10 +208,10 @@ module Datoki
       when [Array]
         field[:options] = args.first
 
-      when [FixNum]
+      when [Fixnum]
         field[:max] = args.first
 
-      when [FixNum, FixNum]
+      when [Fixnum, Fixnum]
         field[:min], field[:max] = args
 
       else
@@ -234,19 +234,19 @@ module Datoki
       when [NilClass]
         field[:allow][:nil] = true
 
-      when [NilClass, FixNum]
+      when [NilClass, Fixnum]
         field[:allow][:nil] = true
         field[:max] = args.last
 
-      when [NilClass, FixNum, FixNum]
+      when [NilClass, Fixnum, Fixnum]
         field[:allow][:nil] = true
         field[:min] = args[-2]
         field[:max] = args.last
 
-      when [FixNum]
+      when [Fixnum]
         field[:max] = args.last
 
-      when [FixNum, FixNum]
+      when [Fixnum, Fixnum]
         field[:min], field[:max] = args
 
       else
@@ -488,7 +488,7 @@ module Datoki
           when [NilClass, NilClass]
             # do nothing
 
-          when [NilClass, FixNum]
+          when [NilClass, Fixnum]
             case
             when val.is_a?(String) && val.size > field[:max]
               fail! "!English_name can't be longer than !max characters."
@@ -496,7 +496,7 @@ module Datoki
               fail! "!English_name can't be higher than !max."
             end
 
-          when [FixNum, NilClass]
+          when [Fixnum, NilClass]
             case
             when val.is_a?(String) && val.size < field[:min]
               fail! "!English_name can't be shorter than !min characters."
@@ -504,12 +504,12 @@ module Datoki
               fail! "!English_name can't be less than !min."
             end
 
-          when [FixNum, FixNum]
+          when [Fixnum, Fixnum]
             case
             when val.is_a?(String) && (val.size < field[:min] || val.size > field[:max])
-              fail! "!English_name has to be between !min && !max characters."
+              fail! "!English_name must be between !min and !max characters."
             when val.is_a?(Numeric) && (val < field[:min] || val > field[:max])
-              fail! "!English_name has to be between !min && !max."
+              fail! "!English_name must be between !min and !max."
             end
 
           else

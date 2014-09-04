@@ -43,7 +43,7 @@ describe String do # ================================================
         include Datoki
         field(:title) { string 3, 255 }
       }.create :title => '1'
-    }.message.should.match /Title must be at least 3/i
+    }.message.should.match /Title must be between 3 and 255 characters/i
   end
 
   it "fails when string is shorter than required length: string x" do
