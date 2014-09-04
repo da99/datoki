@@ -93,7 +93,9 @@ module Datoki
     end
 
     def field? o
-      field[:type] == o
+      field[:type] == o || begin
+        o == :chars && [:string, :text, :chars].include?(field[:type])
+      end
     end
 
     def field *args
@@ -118,6 +120,11 @@ module Datoki
         fail "Type not specified."
       end
       ensure_schema_match
+
+      if field?(:chars) && field[:allow][:nil] && field[:min] < 1
+        fail "String can't be both: allow :nil && :min = #{field[:min]}"
+      end
+
       @def_fields[:current_field] = nil
     end
 

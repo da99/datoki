@@ -37,6 +37,15 @@ describe String do # ================================================
     }.message.should.match /Title is required/i
   end
 
+  it "raises RuntimeError if allow :nil and :min = 0" do
+    should.raise(RuntimeError) {
+      Class.new {
+        include Datoki
+        field(:name) { string nil, 0, 50 }
+      }
+    }.message.should.match /String can't be both: allow :nil && :min = 0/
+  end
+
   it "fails when String is less than min: string x, y" do
     should.raise(Datoki::Invalid) {
       Class.new {
