@@ -398,6 +398,13 @@ describe 'Datoki.db number' do
 
 end # === Datoki.db number
 
+describe 'Datoki.db :new' do
+
+  it 'raises Schema_Conflict if a field is found that allows null, but not specifed to do so'
+  it 'only syncs defs one'
+
+end # === describe Datoki.db :new
+
 
 
 

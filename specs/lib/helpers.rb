@@ -14,7 +14,7 @@ def reset_db sql = nil
   DB << "DROP TABLE IF EXISTS \"datoki_test\";"
   sql ||= <<-EOF
     CREATE TABLE "datoki_test" (
-      id serial NOT NULL PRIMARY KEY,
+      id    serial       NOT NULL PRIMARY KEY,
       title varchar(123) NOT NULL,
       body  text
     );
