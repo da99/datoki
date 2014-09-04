@@ -50,13 +50,23 @@ module Datoki
       @record_errors = true
     end
 
-    def schema
-      @schema 
+    def schema *args
+      case args.size
+      when 0
+        @schema 
+      when 1
+        result = @schema[args.first]
+        fail "Unknown field: #{args.first.inspect}" unless result
+        result
+      else
+        fail "Unknown args: #{args.inspect}"
+      end
     end
 
     def table name
-      @schema = Datoki.db.schema name
-      @schema.each { |pair|
+      @schema = {}
+      Datoki.db.schema(name).each { |pair|
+        @schema[pair.first] = pair.last
         name, meta = pair
         field name do
 
@@ -116,7 +126,7 @@ module Datoki
         :name         => name,
         :type         => :unknown,
         :english_name => name.to_s.freeze,
-        :allow        => {},
+        :allow        => {:nil => false},
         :disable      => {},
         :cleaners     => {},
         :on           => {}
@@ -140,7 +150,7 @@ module Datoki
       return nil if @schema.empty?
       name = field[:name]
 
-      db_schema = schema[name]
+      db_schema = schema name
 
       # === match :text
       db_type = db_schema[:type]
