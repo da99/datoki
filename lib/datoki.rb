@@ -518,7 +518,7 @@ module Datoki
         # ================================
 
         # === :strip if necessary ========
-        if field?(:string) && field[:allow][:strip] && val.is_a?(String)
+        if field?(:chars) && field[:allow][:strip] && val.is_a?(String)
           val! val.strip
         end
         # ================================
@@ -594,7 +594,7 @@ module Datoki
 
               if target < field[:min]
                 err_msg = case
-                          when field?(:string) || val.is_a?(String)
+                          when field?(:chars) || val.is_a?(String)
                             "!English_name must be at least !min in length."
                           else
                             "!English_name must be at least !min."
@@ -608,7 +608,7 @@ module Datoki
 
               if target > field[:max]
                 err_msg = case
-                          when field?(:string) || val.is_a?(String)
+                          when field?(:chars) || val.is_a?(String)
                             "!English_name has a maximum length of !max."
                           else
                             "!English_name can't be more than !max."
