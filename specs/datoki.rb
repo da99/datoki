@@ -338,10 +338,19 @@ end # === describe Datoki.db
 describe "Datoki.db :string" do
 
   before {
-    CACHE[:datoki_db_string] ||= reset_db
+    CACHE[:datoki_db_string] ||= reset_db <<-EOF
+      CREATE TABLE "datoki_test" (
+        id serial NOT NULL PRIMARY KEY,
+        title varchar(123) NOT NULL,
+        body  text
+      );
+    EOF
     @klass = Class.new {
       include Datoki
       table "datoki_test"
+      field(:id) {}
+      field(:title) {}
+      field(:body) {}
     }
   }
 
@@ -374,6 +383,7 @@ describe 'Datoki.db :integer' do
     Class.new {
       include Datoki
       table "datoki_test"
+      field(:parent_id) {}
     }.fields[:parent_id][:min].should == 1
   end
 
