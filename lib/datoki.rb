@@ -589,40 +589,6 @@ module Datoki
                 end
               }
 
-            when :min
-              target = val.is_a?(Numeric) ? val : val.size
-
-              if target < field[:min]
-                err_msg = case
-                          when field?(:chars) || val.is_a?(String)
-                            "!English_name must be at least !min in length."
-                          else
-                            "!English_name must be at least !min."
-                          end
-
-                fail! err_msg
-              end
-
-            when :max
-              target = val.is_a?(Numeric) ? val : val.size
-
-              if target > field[:max]
-                err_msg = case
-                          when field?(:chars) || val.is_a?(String)
-                            "!English_name has a maximum length of !max."
-                          else
-                            "!English_name can't be more than !max."
-                          end
-
-                fail! err_msg
-              end
-
-            when :within
-              target = val.is_a?(Numeric) ? val : val.size
-              if target < field[:min] || target > field[:max]
-                fail! "!English_name must be between !min and !max"
-              end
-
             else
               fail "Cleaner not implemented: #{cleaner.inspect}"
             end # === case cleaner
