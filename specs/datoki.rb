@@ -380,12 +380,12 @@ describe 'Datoki.db number' do
   }
 
   it "sets :min to 1" do
-    c = Class.new {
+    Class.new {
       include Datoki
       table "datoki_test"
       field(:parent_id) {}
-    }
-    c.fields[:parent_id][:min].should == 1
+    }.
+    fields[:parent_id][:min].should == 1
   end
 
 end # === Datoki.db number
