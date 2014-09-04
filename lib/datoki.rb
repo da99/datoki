@@ -552,6 +552,14 @@ module Datoki
         end
         # ================================
 
+        # === Is value in options? =======
+        if field[:options]
+          if !field[:options].include?(val)
+            fail! "!English_name can only be: #{field[:options].map(&:inspect).join ', '}"
+          end
+        end
+        # ================================
+
         field[:cleaners].each { |cleaner, args|
           next if args === false # === cleaner has been disabled.
 
@@ -699,3 +707,6 @@ module Datoki
   end
 
 end # === module Datoki ===
+
+
+

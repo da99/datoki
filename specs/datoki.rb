@@ -170,12 +170,21 @@ describe Integer do
     clean_data[:age].should == nil
   end
 
-  it "allows to specify an array of possible values" do
+  it "allows to specify an Array of possible values" do
     Class.new {
       include Datoki
       field(:age) { integer [1,2,3,4] }
     }.create(:age=>2).
     clean_data[:age].should == 2
+  end
+
+  it "fails if value is not in Array of possible values" do
+    should.raise(Datoki::Invalid) {
+      Class.new {
+        include Datoki
+        field(:num) { integer [1,2,3,4] }
+      }.create :num=>0
+    }.message.should.match /Num can only be: 1, 2, 3, 4/
   end
 
 end # === describe Integer
