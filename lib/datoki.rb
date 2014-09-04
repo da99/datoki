@@ -225,6 +225,11 @@ module Datoki
 
     def type name, *args
       field[:type] = name
+      disable :null
+
+      if !field.has_key?(:min) && (field?(:chars) || field?(:numeric))
+        field[:min] = 1
+      end
 
       case args.map(&:class)
 
