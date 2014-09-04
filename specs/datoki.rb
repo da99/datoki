@@ -37,7 +37,7 @@ describe String do # ================================================
     }.message.should.match /Title is required/i
   end
 
-  it "fails when String is less than min:" do
+  it "fails when String is less than min: string x, y" do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
@@ -46,31 +46,13 @@ describe String do # ================================================
     }.message.should.match /Title must be between 3 and 255 characters/i
   end
 
-  it "fails when string is shorter than required length: string x" do
-    should.raise(Datoki::Invalid) {
-      Class.new {
-        include Datoki
-        field(:name) { string 3, 255 }
-      }.create :name=>'1234'
-    }.message.should.match /needs to be 3 in length/
-  end
-
-  it "fails when string is shorter than min" do
-    should.raise(Datoki::Invalid) {
-      Class.new {
-        include Datoki
-        field(:title) { string 4, 200 }
-      }.create :title => '123'
-    }.message.should.match /must be at least 4/
-  end
-
   it "fails when string is longer than max" do
     should.raise(Datoki::Invalid) {
       Class.new {
         include Datoki
         field(:title) { string 0, 5 }
       }.create :title => '123456'
-    }.message.should.match /Title has a maximum length of 5/
+    }.message.should.match /Title must be between 0 and 5 characters/
   end
 
   it "fails when string does not match pattern: match /../" do
