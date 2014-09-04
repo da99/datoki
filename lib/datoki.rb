@@ -125,7 +125,7 @@ module Datoki
                        end
 
         if db_schema[:allow_null]
-          field[:allow][:nil] = true
+          field[:allow][:null] = true
         end
 
         if db_schema.has_key?(:min_length)
@@ -178,8 +178,8 @@ module Datoki
         end
 
         # === match :allow_null
-        if db_schema[:allow_null] != field[:allow][:nil]
-          fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:nil].inspect}"
+        if db_schema[:allow_null] != field[:allow][:null]
+          fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
         end
 
         # === match default
@@ -190,8 +190,8 @@ module Datoki
         end
       end # === ensure schema match
 
-      if field?(:chars) && field[:allow][:nil] && field[:min] < 1
-        fail "String can't be both: allow :nil && :min = #{field[:min]}"
+      if field?(:chars) && field[:allow][:null] && field[:min] < 1
+        fail "String can't be both: allow :null && :min = #{field[:min]}"
       end
 
       @current_field = nil
@@ -232,17 +232,17 @@ module Datoki
 
       when [Array]
         field[:options] = args.first
-        enable(:nil) if field[:options].include? nil
+        enable(:null) if field[:options].include? nil
 
       when [NilClass]
-        enable :nil
+        enable :null
 
       when [NilClass, Fixnum]
-        enable :nil
+        enable :null
         field[:min] = args.last
 
       when [NilClass, Fixnum, Fixnum]
-        field[:allow][:nil] = true
+        field[:allow][:null] = true
         field[:min] = args[-2]
         field[:max] = args.last
 
@@ -262,7 +262,7 @@ module Datoki
     def enable *props
       props.each { |prop|
         case prop
-        when :strip, :nil
+        when :strip, :null
           field[:allow][prop] = true
         else
           field[:cleaners][prop] = true
@@ -273,7 +273,7 @@ module Datoki
     def disable *props
       props.each { |prop|
         case prop
-        when :strip, :nil
+        when :strip, :null
           field[:allow][prop] = false
         else
           field[:cleaners][prop] = false
@@ -440,7 +440,7 @@ module Datoki
       next if !is_set && is_update
       next if !is_set && field[:primary_key]
       next if !is_set && field[:default] == :db
-      next if field[:allow][:nil] && (!is_set || is_nil)
+      next if field[:allow][:null] && (!is_set || is_nil)
 
       if is_set 
         val! new_data[field_name]
@@ -452,7 +452,7 @@ module Datoki
         val! val.strip
       end
 
-      if val.is_a?(String) && field[:allow][:nil] && val.empty?
+      if val.is_a?(String) && field[:allow][:null] && val.empty?
         val! nil
       end
 
@@ -479,7 +479,7 @@ module Datoki
         # ================================
 
         # === check required. ============
-        if val.nil? && !field[:allow][:nil]
+        if val.nil? && !field[:allow][:null]
           fail! "!English_name is required."
         end
         # ================================
