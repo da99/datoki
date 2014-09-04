@@ -276,6 +276,14 @@ describe "Datoki.db" do
     r.clean_data.keys.should == [:title]
   end
 
+  it "imports :allow_null" do
+    Class.new {
+      include Datoki
+      table :datoki_test
+      field(:body) { string 1, 123 }
+    }.fields[:body][:allow][:nil].should == true
+  end
+
 end # === describe Datoki.db
 
 describe "Datoki.db Schema_Conflict" do
@@ -323,16 +331,6 @@ describe "Datoki.db Schema_Conflict" do
         }
       }
     }.message.should.match /:default: #<Sequel::SQL::Constant @constant=>:CURRENT_TIMESTAMP> != "hello"/i
-  end
-
-  it "raises Schema_Conflict if :allow_null = true, and allow(:nil) is not called" do
-    should.raise(Datoki::Schema_Conflict) {
-      Class.new {
-        include Datoki
-        table :datoki_test
-        field(:title) { string 1, 123 }
-      }
-    }.message.should.match /schema conflict: :allow_null != :allow :nil/i
   end
 
 end # === describe Datoki.db
