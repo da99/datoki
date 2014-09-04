@@ -28,6 +28,16 @@ module Datoki
       @tables = @db.tables
     end
 
+    def db_type_to_ruby type
+      if Datoki::Types.include?( type.to_sym )
+        type.to_sym
+      elsif type['character varying']
+        :varchar
+      else
+        type
+      end
+    end
+
   end # === class self ===
 
   module Def_Field
@@ -117,13 +127,7 @@ module Datoki
       unless @schema.empty? # === import from db schema
         db_schema = schema(@current_field)
 
-        field[:type] = if Datoki::Types.include?( db_schema[:db_type].to_sym )
-                         db_schema[:db_type].to_sym
-                       elsif db_schema[:db_type]['character varying']
-                         :varchar
-                       else
-                         db_schema[:type]
-                       end
+        field[:type] = Datoki.db_type_to_ruby db_schema[:db_type]
 
         if db_schema[:allow_null]
           field[:allow][:null] = true
@@ -158,8 +162,8 @@ module Datoki
         db_schema = schema name
 
         # === match :text
-        db_type = db_schema[:type]
-        type = field[:type]
+        db_type = Datoki.db_type_to_ruby db_schema[:db_type]
+        type    = field[:type]
         if db_type != type
           fail Schema_Conflict, ":type: #{db_type.inspect} != #{type.inspect}"
         end
@@ -191,7 +195,7 @@ module Datoki
         end
       end # === ensure schema match
 
-      if field?(:chars) && field[:allow][:null] && field[:min] < 1
+      if field?(:chars) && field[:allow][:null] && field.has_key?(:min) && field[:min] < 1
         fail "#{field[:type].inspect} can't be both: allow :null && :min = #{field[:min]}"
       end
 
