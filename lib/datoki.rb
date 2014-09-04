@@ -133,6 +133,14 @@ module Datoki
 
         if db_schema[:allow_null]
           field[:allow][:null] = true
+        else
+          if field?(:chars) || field?(:numeric)
+            field[:min] ||= 1
+          end
+
+          if field?(:varchar)
+            field[:max] ||= 255
+          end
         end
 
         if db_schema.has_key?(:min_length)
