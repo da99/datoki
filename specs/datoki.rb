@@ -297,7 +297,7 @@ describe "Datoki.db Schema_Conflict" do
         table :datoki_test
         field(:body) { string nil, 1, 255 }
       }
-    }.message.should.match /Schema conflict allow null: true != false/i
+    }.message.should.match /:allow_null: false != true/i
   end
 
   it "raises Schema_Conflict when there is a :max_length conflict" do
@@ -307,7 +307,7 @@ describe "Datoki.db Schema_Conflict" do
         table :datoki_test
         field(:title) { string 1, 200 }
       }
-    }.message.should.match /Schema_Conflict in :max: 123 => 200/i
+    }.message.should.match /:max: 123 => 200/i
   end
 
   it "raises Schema_Conflict when db default value is not (stringy, numeric) and datoki default is a different class" do
@@ -320,7 +320,7 @@ describe "Datoki.db Schema_Conflict" do
           default "hello"
         }
       }
-    }.message.should.match /Schema conflict in default: default != default/i
+    }.message.should.match /default: default != default/i
   end
 
   it "raises Schema_Conflict if :allow_null = true, and allow(:nil) is not called" do

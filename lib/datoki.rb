@@ -67,33 +67,34 @@ module Datoki
       @schema = {}
       Datoki.db.schema(name).each { |pair|
         @schema[pair.first] = pair.last
-        name, meta = pair
-        field name do
-
-
-          type_args = case
-                      when [:string, :integer].include?(meta[:type])
-                        [ (meta[:min_length] || 1), meta[:max_length]].compact
-                      else
-                        []
-                      end
-          if meta[:allow_null]
-            type_args.unshift nil
-          end
-
-          send(meta[:type], *type_args)
-
-          primary_key if meta[:primary_key]
-          default(:db) if meta[:ruby_default] || meta[:default]
-
-          case meta[:type]
-          when :string
-          when :integer
-          else
-            fail "Unknown db type: #{meta[:type]}"
-          end
-        end # === field
       }
+      schema
+    end
+
+    def import_field_from_db
+      name = @def_fields[:current_field]
+      meta = schema(name)
+      type_args = case
+                  when [:string, :integer].include?(meta[:type])
+                    [ (meta[:min_length] || 1), meta[:max_length]].compact
+                  else
+                    []
+                  end
+      if meta[:allow_null]
+        type_args.unshift nil
+      end
+
+      send(meta[:type], *type_args)
+
+      primary_key if meta[:primary_key]
+      default(:db) if meta[:ruby_default] || meta[:default]
+
+      case meta[:type]
+      when :string
+      when :integer
+      else
+        fail "Unknown db type: #{meta[:type]}"
+      end
     end
 
     def fields
@@ -120,6 +121,8 @@ module Datoki
       return fields[@def_fields[:current_field]] if args.empty?
       return fields[args.first] unless block_given?
 
+      do_import = !fields.has_key?(args.first)
+
       name = args.first
 
       fields[name] ||= {
@@ -133,10 +136,13 @@ module Datoki
       }
 
       @def_fields[:current_field] = name
+
+      import_field_from_db if do_import
+
       yield
-      if field[:type] == :unknown
-        fail "Type not specified."
-      end
+
+      fail("Type not specified.") if field[:type] == :unknown
+
       ensure_schema_match
 
       if field?(:chars) && field[:allow][:nil] && field[:min] < 1
@@ -156,26 +162,26 @@ module Datoki
       db_type = db_schema[:type]
       type = field[:type]
       if db_type != type
-        fail Schema_Conflict, ":type => #{db_type.inspect} != #{type.inspect}"
+        fail Schema_Conflict, ":type: #{db_type.inspect} != #{type.inspect}"
       end
 
       # === match :max_length
       db_max   = db_schema[:max_length]
       max = field[:max]
       if !db_max.nil? && db_max != max
-        fail Schema_Conflict, ":max_length => #{db_max.inspect} != #{max.inspect}"
+        fail Schema_Conflict, ":max_length: #{db_max.inspect} != #{max.inspect}"
       end
 
       # === match :min_length
       db_min   = db_schema[:min_length]
       min = field[:min]
       if !db_min.nil? && db_min != min
-        fail Schema_Conflict, ":min_length => #{db_min.inspect} != #{min.inspect}"
+        fail Schema_Conflict, ":min_length: #{db_min.inspect} != #{min.inspect}"
       end
 
       # === match :allow_null
       if db_schema[:allow_null] != field[:allow][:nil]
-        fail Schema_Conflict, ":allow_null => #{db_schema[:allow_null].inspect} != #{field[:allow][:nil].inspect}"
+        fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:nil].inspect}"
       end
 
       # === match default
