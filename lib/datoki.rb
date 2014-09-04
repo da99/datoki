@@ -447,10 +447,12 @@ module Datoki
         val! field[:default]
       end
 
-      if field[:type] == :string && field[:allow][:nil] && field[:min] < 1
-        if val.is_a?(String) && val.strip.empty?
-          val! nil
-        end
+      if val.is_a?(String) && field[:strip]
+        val! val.strip
+      end
+
+      if val.is_a?(String) && field[:allow][:nil] && val.empty?
+        val! nil
       end
 
       catch :error_saved do
