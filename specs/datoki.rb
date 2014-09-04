@@ -200,9 +200,9 @@ describe "on :create" do
         clean_data[:values] = clean_data.values.join ', '
       end
 
-      field(:title) { default 'default title' }
+      field(:title) { string; default 'default title' }
 
-      field(:body) { default 'default body' }
+      field(:body) { string; default 'default body' }
 
     }.
     create.
@@ -217,6 +217,7 @@ describe "on :create" do
           clean_data[:body] << ' with new stuff'
         end
 
+        string
         default 'default body'
       }
     }.
@@ -231,8 +232,8 @@ describe "on :update" do
   it "does not override old, unset fields with default values" do
     r = Class.new {
       include Datoki
-      field(:title) { default 'my title' }
-      field(:body) { default 'my body' }
+      field(:title) { string; default 'my title' }
+      field(:body) { string; default 'my body' }
     }.new(:title=>'old title')
     r.update :body=>'new body'
     r.clean_data.should == {:body=>'new body'}
