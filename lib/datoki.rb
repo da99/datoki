@@ -13,7 +13,7 @@ module Datoki
   Actions       = [:all, :create, :read, :update, :update_or_create, :trash, :delete]
   Char_Types    = [:varchar, :text]
   Numeric_Types = [:smallint, :integer, :bigint, :decimal, :numeric]
-  Types         = Char_Types + Numeric_Types
+  Types         = Char_Types + Numeric_Types + [:datetime]
 
   class << self
 
@@ -28,13 +28,15 @@ module Datoki
       @tables = @db.tables
     end
 
-    def db_type_to_ruby type
+    def db_type_to_ruby type, alt = nil
       if Datoki::Types.include?( type.to_sym )
         type.to_sym
       elsif type['character varying']
         :varchar
+      elsif Datoki::Types.include?(alt)
+        alt
       else
-        type
+        fail("Unknown db type: #{type.inspect}")
       end
     end
 
@@ -127,7 +129,7 @@ module Datoki
       unless @schema.empty? # === import from db schema
         db_schema = schema(@current_field)
 
-        field[:type] = Datoki.db_type_to_ruby db_schema[:db_type]
+        field[:type] = Datoki.db_type_to_ruby db_schema[:db_type], db_schema[:type]
 
         if db_schema[:allow_null]
           field[:allow][:null] = true
@@ -143,8 +145,6 @@ module Datoki
 
         primary_key if db_schema[:primary_key]
         default(:db) if db_schema[:ruby_default] || db_schema[:default]
-
-        fail("Unknown db type: #{db_schema[:db_type].inspect}") unless Types.include?(field[:type])
       end # === import from db schema
 
       if field? :chars
@@ -161,8 +161,8 @@ module Datoki
 
         db_schema = schema name
 
-        # === match :text
-        db_type = Datoki.db_type_to_ruby db_schema[:db_type]
+        # === match :type
+        db_type = Datoki.db_type_to_ruby db_schema[:db_type], db_schema[:type]
         type    = field[:type]
         if db_type != type
           fail Schema_Conflict, ":type: #{db_type.inspect} != #{type.inspect}"
