@@ -305,13 +305,6 @@ module Datoki
       }
     end
 
-    def default_enable *props
-      props.each { |prop|
-        next if field[:cleaners].has_key?(prop)
-        field[:cleaners][prop] = true
-      }
-    end
-
     def default val
       field[:default] = val
     end
