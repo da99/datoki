@@ -441,7 +441,7 @@ module Datoki
   end
 
   def field? *args
-    slef.class.inspect_field? :type, field_name, *args
+    self.class.inspect_field? :type, field_name, *args
   end
 
   def run action
