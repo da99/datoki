@@ -322,7 +322,7 @@ describe "Datoki.db Schema_Conflict" do
           default "hello"
         }
       }
-    }.message.should.match /default: default != default/i
+    }.message.should.match /:default: default != "hello"/i
   end
 
   it "raises Schema_Conflict if :allow_null = true, and allow(:nil) is not called" do
