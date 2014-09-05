@@ -148,7 +148,7 @@ module Datoki
     def schema_match target = :current
       return true if schema_match?
 
-      if target == :all
+      if target == :all # === do a schema match on entire table
         schema.each { |name, db_schema|
           orig_field = @current_field
           @current_field = name
@@ -160,9 +160,14 @@ module Datoki
         return true
       end # === if target
 
+      return true if field[:schema_match]
       name      = @current_field
       db_schema = schema[@current_field]
-      return true if field[:schema_matched]
+
+      if db_schema && !field
+        check_null
+        return true
+      end
 
       if field?(:chars)
         if !field[:min].is_a?(Numeric) || field[:min] < 0
@@ -216,7 +221,7 @@ module Datoki
         fail "#{field[:type].inspect} can't be both: allow :null && :min = #{field[:min]}"
       end
 
-      field[:schema_matched] = true
+      field[:schema_match] = true
     end
 
     def on action, meth_name_sym
