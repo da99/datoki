@@ -52,8 +52,13 @@ module Datoki
       @fields        = {}
       @current_field = nil
       @schema        = {}
+      @schema_match  = false
       name = self.to_s.downcase.to_sym
       table(name) if Datoki.db.tables.include?(name)
+    end
+
+    def schema_match?
+      @schema_match
     end
 
     def record_errors?
@@ -126,9 +131,6 @@ module Datoki
 
       @current_field = name
 
-      # unless @schema.empty? # === import from db schema
-      # end # === import from db schema
-
       if field? :chars
         field[:allow][:strip] = true
       end
@@ -138,68 +140,84 @@ module Datoki
       fail("Type not specified for #{name.inspect}") if field[:type] == :unknown
 
       # === Ensure schema matches with field definition:
-      unless @schema.empty?
-
-        db_schema = schema(@current_field)
-
-        if field?(:chars)
-          if !field[:min].is_a?(Numeric) || field[:min] < 0
-            fail ":min not properly defined for #{name.inspect}: #{field[:min].inspect}"
-          end
-
-          if !field[:max].is_a?(Numeric)
-            fail ":max not properly defined for #{name.inspect}: #{field[:max].inspect}"
-          end
-        end
-
-        if db_schema.has_key?(:max_length)
-          field[:max] = db_schema[:max_length]
-          if field[:max] != db_schema[:max_length]
-            fail Schema_Conflict, ":max: #{db_schema[:max_length].inspect} != #{field[:max].inspect}"
-          end
-        end
-
-        primary_key if db_schema[:primary_key]
-
-        name = field[:name]
-
-        db_schema = schema name
-
-        # === match :type
-        db_type = Datoki.db_type_to_ruby db_schema[:db_type], db_schema[:type]
-        type    = field[:type]
-        if db_type != type
-          fail Schema_Conflict, ":type: #{db_type.inspect} != #{type.inspect}"
-        end
-
-        # === match :max_length
-        db_max   = db_schema[:max_length]
-        max = field[:max]
-        if !db_max.nil? && db_max != max
-          fail Schema_Conflict, ":max_length: #{db_max.inspect} != #{max.inspect}"
-        end
-
-        # === match :min_length
-        db_min   = db_schema[:min_length]
-        min = field[:min]
-        if !db_min.nil? && db_min != min
-          fail Schema_Conflict, ":min_length: #{db_min.inspect} != #{min.inspect}"
-        end
-
-        # === match :allow_null
-        if db_schema[:allow_null] != field[:allow][:null]
-          fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
-        end
-
-      end # === ensure schema match
-
-      if field?(:chars) && field[:allow][:null] && field.has_key?(:min) && field[:min] < 1
-        fail "#{field[:type].inspect} can't be both: allow :null && :min = #{field[:min]}"
-      end
+      schema_match
 
       @current_field = nil
     end # === def field
 
+    def schema_match target = :current
+      return true if schema_match?
+
+      if target == :all
+        schema.each { |name, db_schema|
+          orig_field = @current_field
+          @current_field = name
+          schema_match
+          @current_field = orig_field
+        }
+
+        @schema_match = true
+        return true
+      end # === if target
+
+      name      = @current_field
+      db_schema = schema[@current_field]
+      return true if field[:schema_matched]
+
+      if field?(:chars)
+        if !field[:min].is_a?(Numeric) || field[:min] < 0
+          fail ":min not properly defined for #{name.inspect}: #{field[:min].inspect}"
+        end
+
+        if !field[:max].is_a?(Numeric)
+          fail ":max not properly defined for #{name.inspect}: #{field[:max].inspect}"
+        end
+      end
+
+      if db_schema.has_key?(:max_length)
+        field[:max] = db_schema[:max_length]
+        if field[:max] != db_schema[:max_length]
+          fail Schema_Conflict, ":max: #{db_schema[:max_length].inspect} != #{field[:max].inspect}"
+        end
+      end
+
+      if db_schema[:primary_key] != !field[:primary_key]
+        fail Schema_Conflict, ":primary_key: #{db_schema[:primary_key].inspect} != #{field[:primary_key].inspect}"
+      end
+
+      # === match :type
+      db_type = Datoki.db_type_to_ruby db_schema[:db_type], db_schema[:type]
+      type    = field[:type]
+      if db_type != type
+        fail Schema_Conflict, ":type: #{db_type.inspect} != #{type.inspect}"
+      end
+
+      # === match :max_length
+      db_max = db_schema[:max_length]
+      max    = field[:max]
+      if !db_max.nil? && db_max != max
+        fail Schema_Conflict, ":max_length: #{db_max.inspect} != #{max.inspect}"
+      end
+
+      # === match :min_length
+      db_min = db_schema[:min_length]
+      min    = field[:min]
+      if !db_min.nil? && db_min != min
+        fail Schema_Conflict, ":min_length: #{db_min.inspect} != #{min.inspect}"
+      end
+
+      # === match :allow_null
+      if db_schema[:allow_null] != field[:allow][:null]
+        fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
+      end
+
+      # === check :allow_null and :min are not both set.
+      if field?(:chars) && field[:allow][:null] && field.has_key?(:min) && field[:min] < 1
+        fail "#{field[:type].inspect} can't be both: allow :null && :min = #{field[:min]}"
+      end
+
+      field[:schema_matched] = true
+    end
 
     def on action, meth_name_sym
       fail "Invalid action: #{action.inspect}" unless Actions.include? action
@@ -361,6 +379,8 @@ module Datoki
     @field_name = nil
     @clean_data = nil
     @errors     = nil
+
+    self.class.schema_match(:all)
   end
 
   def errors
