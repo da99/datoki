@@ -126,33 +126,8 @@ module Datoki
 
       @current_field = name
 
-      unless @schema.empty? # === import from db schema
-        db_schema = schema(@current_field)
-
-        field[:type] = Datoki.db_type_to_ruby db_schema[:db_type], db_schema[:type]
-
-        if db_schema[:allow_null]
-          field[:allow][:null] = true
-        else
-          if field?(:chars) || field?(:numeric)
-            field[:min] ||= 1
-          end
-
-          if field?(:varchar)
-            field[:max] ||= 255
-          end
-        end
-
-        if db_schema.has_key?(:min_length)
-          field[:min] = db_schema[:min_length]
-        end
-
-        if db_schema.has_key?(:max_length)
-          field[:max] = db_schema[:max_length]
-        end
-
-        primary_key if db_schema[:primary_key]
-      end # === import from db schema
+      # unless @schema.empty? # === import from db schema
+      # end # === import from db schema
 
       if field? :chars
         field[:allow][:strip] = true
@@ -160,10 +135,32 @@ module Datoki
 
       yield
 
-      fail("Type not specified.") if field[:type] == :unknown
+      fail("Type not specified for #{name.inspect}") if field[:type] == :unknown
 
       # === Ensure schema matches with field definition:
       unless @schema.empty?
+
+        db_schema = schema(@current_field)
+
+        if field?(:chars)
+          if !field[:min].is_a?(Numeric) || field[:min] < 0
+            fail ":min not properly defined for #{name.inspect}: #{field[:min].inspect}"
+          end
+
+          if !field[:max].is_a?(Numeric)
+            fail ":max not properly defined for #{name.inspect}: #{field[:max].inspect}"
+          end
+        end
+
+        if db_schema.has_key?(:max_length)
+          field[:max] = db_schema[:max_length]
+          if field[:max] != db_schema[:max_length]
+            fail Schema_Conflict, ":max: #{db_schema[:max_length].inspect} != #{field[:max].inspect}"
+          end
+        end
+
+        primary_key if db_schema[:primary_key]
+
         name = field[:name]
 
         db_schema = schema name
