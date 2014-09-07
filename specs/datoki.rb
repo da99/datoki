@@ -465,6 +465,7 @@ describe :url do
   end
 
   it "accepts a :min and :max" do
+    CACHE[:datoki_db_url] = nil
     reset_db <<-EOF
       CREATE TABLE "datoki_test" (
         id       serial       NOT NULL PRIMARY KEY,
@@ -479,6 +480,24 @@ describe :url do
     }
     k.fields[:homepage][:min].should == 5
     k.fields[:homepage][:max].should == 123
+  end
+
+  it "sets :min = 1 when null is allowed." do
+    CACHE[:datoki_db_url] = nil
+    reset_db <<-EOF
+      CREATE TABLE "datoki_test" (
+        id       serial       NOT NULL PRIMARY KEY,
+        homepage varchar(222)
+      );
+    EOF
+    k = Class.new {
+      include Datoki
+      table :datoki_test
+      field(:id) { primary_key }
+      field(:homepage) { url nil }
+    }
+    k.fields[:homepage][:min].should == 1
+    k.fields[:homepage][:max].should == 222
   end
 
 end # === describe :url

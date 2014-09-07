@@ -286,7 +286,7 @@ module Datoki
       when []
         varchar 0, 255
       when [NilClass]
-        varchar nil, 1, 255
+        varchar nil, 1, (schema[field[:name]] ? schema[field[:name]][:max_length] : 255)
       else
         varchar *args
       end
