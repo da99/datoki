@@ -262,13 +262,20 @@ describe "Datoki.db" do
       table "datoki_test"
       field(:id) { integer; primary_key }
       field(:title) { varchar 1, 123 }
-      field(:body) { text 1, 123 }
+      field(:body) { text nil, 1, 123 }
     }
   }
 
-  it "imports :allow_null" do
-    @klass.
-    fields[:body][:allow][:null].should == true
+  it 'raises Schema_Conflict if a field is found that allows null, but not specifed to do so' do
+    should.raise(Datoki::Schema_Conflict) {
+      Class.new {
+        include Datoki
+        table :datoki_test
+        field(:id) { integer; primary_key }
+        field(:title) { varchar 1, 123 }
+        field(:body) { text 1, 123 }
+      }
+    }.message.should.match /:allow_null: true != false/
   end
 
   it "requires field if value = null and default = null and :allow_null = false" do
@@ -416,25 +423,12 @@ describe 'Datoki.db :new' do
     should.raise(Datoki::Schema_Conflict) {
       Class.new {
         include Datoki
-        table "datoki_test"
+        table :datoki_test
         field(:id) { primary_key }
         field(:parent_id) { smallint }
         field(:body) { text 1, 222 }
       }.new
     }.message.should.match /:title has not been defined/
-  end
-
-  it 'raises Schema_Conflict if a field is found that allows null, but not specifed to do so' do
-    should.raise(Datoki::Schema_Conflict) {
-      Class.new {
-        include Datoki
-        table "datoki_test"
-        field(:id) { primary_key }
-        field(:parent_id) { smallint }
-        field(:title) { varchar 1, 123 }
-        field(:body) { text 1, 222 }
-      }.new
-    }.message.should.match /:body: allows :null, but not specified/
   end
 
 end # === describe Datoki.db :new

@@ -153,7 +153,6 @@ module Datoki
       end
 
       if schema[name]
-        fields[name][:allow][:null] = schema[name][:allow_null]
         if schema[name].has_key? :max_length
           fields[name][:max] = schema[name][:max_length]
         end
