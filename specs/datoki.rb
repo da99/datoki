@@ -273,7 +273,10 @@ describe "Datoki.db" do
     r.errors.should == {:body=>{:msg=>'Body is required.', :value=>nil}}
   end
 
-  it "does not turn strip.empty? strings into nulls"
+  it "does not turn strip.empty? strings into nulls" do
+    r = @klass.create :title=>"The title", :text=>'   '
+    r.clean_data[:body].should == ''
+  end
 
   it "imports field names into class" do
     @klass.fields.keys.should == [:id, :title, :body]
@@ -360,9 +363,9 @@ describe "Datoki.db :varchar" do
     @klass = Class.new {
       include Datoki
       table "datoki_test"
-      field(:id) {}
-      field(:title) {}
-      field(:body) {}
+      field(:id) { primary_key }
+      field(:title) { varchar 1, 123 }
+      field(:body) { text 1, 3000 }
     }
   }
 
