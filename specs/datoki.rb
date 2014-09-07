@@ -539,6 +539,10 @@ describe :html_escape do
     }
   end
 
+  it "sets :url for urls" do
+    @klass.html_escape[:url].should == :url
+  end
+
 end # === describe :html_escape
 
 
