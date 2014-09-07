@@ -257,14 +257,19 @@ describe "Datoki.db" do
       include Datoki
       record_errors
       table "datoki_test"
-      field(:id) { }
-      field(:title) { }
-      field(:body) { }
+      field(:id) { integer; primary_key }
+      field(:title) { varchar 1, 123 }
+      field(:body) { text 1, 123 }
     }
   }
 
-  it "requires field if value = null and default = null and :allow_null = false"
+  it "requires field if value = null and default = null and :allow_null = false" do
+    r = @klass.create :title=>nil, :body=>"hiya"
+    r.errors.should == {:title=>{:msg=>'Title is required.', :value=>nil}}
+  end
+
   it "requires field if :required = true"
+
   it "does not turn strip.empty? strings into nulls"
 
   it "imports field names into class" do
