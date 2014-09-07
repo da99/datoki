@@ -7,7 +7,7 @@ module Datoki
   UTC_NOW_RAW  = "timezone('UTC'::text, now())"
   UTC_NOW      = ::Sequel.lit("timezone('UTC'::text, now())")
 
-  Invalid = Class.new RuntimeError
+  Invalid         = Class.new RuntimeError
   Schema_Conflict = Class.new RuntimeError
 
   Actions       = [:all, :create, :read, :update, :update_or_create, :trash, :delete]
