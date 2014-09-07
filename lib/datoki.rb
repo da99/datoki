@@ -280,13 +280,13 @@ module Datoki
     def type name, *args
       field[:type] = name
 
-      if field?(:chars) || field?(:numeric)
-        field[:min] ||= 1
-      end
-
-      if field?(:chars)
+      if field?(:chars) && !field?(:text)
         field[:max] ||= 255
         enable :strip
+      end
+
+      if field?(:chars) && schema[name] && !schema[name][:allow_null]
+        field[:min] = 1
       end
 
       case args.map(&:class)
@@ -518,6 +518,10 @@ module Datoki
 
       if val.is_a?(String) && field[:allow][:strip]
         val! val.strip
+      end
+
+      if field?(:chars) && !field.has_key?(:min) && val.is_a?(String) && field[:allow][:null]
+        val! nil
       end
 
       catch :error_saved do
