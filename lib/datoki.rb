@@ -53,11 +53,9 @@ module Datoki
       @current_field = nil
       @schema        = {}
       @schema_match  = false
+      @table_name    = nil
       name = self.to_s.downcase.to_sym
       table(name) if Datoki.db.tables.include?(name)
-      if @schema.empty?
-        @schema_match = true
-      end
     end
 
     def schema_match?
@@ -73,10 +71,18 @@ module Datoki
     end
 
     def table name
-      @schema = {}
+      if !@schema.empty? || @table_name
+        fail "Schema/table already defined: #{@table_name.inspect}"
+      end
+
       Datoki.db.schema(name).each { |pair|
         @schema[pair.first] = pair.last
       }
+
+      if @schema.empty?
+        @schema_match = true
+      end
+
       schema
     end
 
@@ -180,9 +186,8 @@ module Datoki
       name      = @current_field
       db_schema = schema[@current_field]
 
-      if db_schema && !field
-        check_null
-        return true
+      if db_schema[:allow_null] != field[:allow][:null]
+        fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
       end
 
       if field?(:chars)
