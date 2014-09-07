@@ -386,13 +386,13 @@ describe 'Datoki.db number' do
                                   end
   }
 
-  it "sets :min to 1" do
+  it "does not set :min = 1" do
     Class.new {
       include Datoki
       table "datoki_test"
-      field(:parent_id) {}
+      field(:parent_id) { smallint }
     }.
-    fields[:parent_id][:min].should == 1
+    fields[:parent_id][:min].should == nil
   end
 
 end # === Datoki.db number
