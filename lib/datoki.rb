@@ -138,6 +138,13 @@ module Datoki
         field[:allow][:strip] = true
       end
 
+      if schema[name]
+        fields[name][:allow][:null] = schema[name][:allow_null]
+        if schema[name].has_key? :max_length
+          fields[name][:max] = schema[name][:max_length]
+        end
+      end
+
       yield
 
       fail("Type not specified for #{name.inspect}") if field[:type] == :unknown
@@ -258,7 +265,6 @@ module Datoki
 
     def type name, *args
       field[:type] = name
-      disable :null
 
       if field?(:chars) || field?(:numeric)
         field[:min] ||= 1

@@ -263,6 +263,11 @@ describe "Datoki.db" do
     }
   }
 
+  it "imports :allow_null" do
+    @klass.
+    fields[:body][:allow][:null].should == true
+  end
+
   it "requires field if value = null and default = null and :allow_null = false" do
     r = @klass.create :title=>nil, :body=>"hiya"
     r.errors.should == {:title=>{:msg=>'Title is required.', :value=>nil}}
@@ -289,14 +294,6 @@ describe "Datoki.db" do
   it "removes field from :clean_data if set to nil and database has a default value" do
     r = @klass.create :title=>'hello', :body=>nil
     r.clean_data.keys.should == [:title]
-  end
-
-  it "imports :allow_null" do
-    Class.new {
-      include Datoki
-      table :datoki_test
-      field(:body) {  }
-    }.fields[:body][:allow][:null].should == true
   end
 
 end # === describe Datoki.db
