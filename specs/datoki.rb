@@ -338,7 +338,7 @@ describe "Datoki.db Schema_Conflict" do
       Class.new {
         include Datoki
         table :datoki_test
-        field(:title) { varchar 1, 200 }
+        field(:title) { varchar nil, 1, 200 }
       }
     }.message.should.match /:max: 123 != 200/i
   end
