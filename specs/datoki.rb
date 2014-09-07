@@ -228,14 +228,18 @@ end # === describe on :create
 
 describe "on :update" do
 
-  it "does not override old, unset fields with default values" do
+  it "runs after data has been cleaned" do
     r = Class.new {
       include Datoki
+      on :update, def do_something
+        clean_data[:vals] = clean_data.values.join ' -- '
+      end
+
       field(:title) { varchar }
       field(:body) { varchar }
     }.new(:title=>'old title')
-    r.update :body=>'new body'
-    r.clean_data.should == {:body=>'new body'}
+    r.update title: ' new title ', :body=>'  new body  '
+    r.clean_data[:vals].should == 'new title -- new body'
   end
 
 end # === describe on :update
