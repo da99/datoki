@@ -424,10 +424,10 @@ describe 'Datoki.db :new' do
 end # === describe Datoki.db :new
 
 
-describe :url do
+describe :href do
 
   before {
-    CACHE[:datoki_db_url] ||= begin
+    CACHE[:datoki_db_href] ||= begin
                                 reset_db <<-EOF
                                   CREATE TABLE "datoki_test" (
                                     id       serial       NOT NULL PRIMARY KEY,
@@ -440,7 +440,7 @@ describe :url do
       include Datoki
       table :datoki_test
       field(:id) { primary_key }
-      field(:homepage) { url }
+      field(:homepage) { href }
     }
   }
 
@@ -460,12 +460,12 @@ describe :url do
     @klass.fields[:homepage][:allow][:null].should == false
   end
 
-  it "sets :html_escape to :url" do
-    @klass.fields[:homepage][:html_escape].should == :url
+  it "sets :html_escape to :href" do
+    @klass.fields[:homepage][:html_escape].should == :href
   end
 
   it "accepts a :min and :max" do
-    CACHE[:datoki_db_url] = nil
+    CACHE[:datoki_db_href] = nil
     reset_db <<-EOF
       CREATE TABLE "datoki_test" (
         id       serial       NOT NULL PRIMARY KEY,
@@ -476,14 +476,14 @@ describe :url do
       include Datoki
       table :datoki_test
       field(:id) { primary_key }
-      field(:homepage) { url 5, 123 }
+      field(:homepage) { href 5, 123 }
     }
     k.fields[:homepage][:min].should == 5
     k.fields[:homepage][:max].should == 123
   end
 
   it "sets :min = 1 when null is allowed." do
-    CACHE[:datoki_db_url] = nil
+    CACHE[:datoki_db_href] = nil
     reset_db <<-EOF
       CREATE TABLE "datoki_test" (
         id       serial       NOT NULL PRIMARY KEY,
@@ -494,13 +494,13 @@ describe :url do
       include Datoki
       table :datoki_test
       field(:id) { primary_key }
-      field(:homepage) { url nil }
+      field(:homepage) { href nil }
     }
     k.fields[:homepage][:min].should == 1
     k.fields[:homepage][:max].should == 222
   end
 
-end # === describe :url
+end # === describe :href
 
 
 describe :html_escape do
@@ -524,7 +524,7 @@ describe :html_escape do
       field(:id) { primary_key }
       field(:parent_id) { smallint }
       field(:title) { varchar 1, 123 }
-      field(:url) { url }
+      field(:url) { href }
       field(:body) { text 1, 244 }
     }
   }
@@ -534,13 +534,13 @@ describe :html_escape do
       :id        => :number,
       :parent_id => :number,
       :title     => :string,
-      :url       => :url,
+      :url       => :href,
       :body      => :string
     }
   end
 
-  it "sets :url for urls" do
-    @klass.html_escape[:url].should == :url
+  it "sets :href for urls" do
+    @klass.html_escape[:url].should == :href
   end
 
 end # === describe :html_escape

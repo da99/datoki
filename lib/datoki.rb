@@ -300,8 +300,8 @@ module Datoki
       type :text, *args
     end
 
-    def url *args
-      field[:html_escape] = :url
+    def href *args
+      field[:html_escape] = :href
       case args.map(&:class)
       when []
         varchar 0, 255
