@@ -438,6 +438,7 @@ describe :url do
 
     @klass = Class.new {
       include Datoki
+      table :datoki_test
       field(:id) { primary_key }
       field(:homepage) { url }
     }
@@ -461,6 +462,23 @@ describe :url do
 
   it "sets :html_escape to :url" do
     @klass.fields[:homepage][:html_escape].should == :url
+  end
+
+  it "accepts a :min and :max" do
+    reset_db <<-EOF
+      CREATE TABLE "datoki_test" (
+        id       serial       NOT NULL PRIMARY KEY,
+        homepage varchar(123) NOT NULL
+      );
+    EOF
+    k = Class.new {
+      include Datoki
+      table :datoki_test
+      field(:id) { primary_key }
+      field(:homepage) { url 5, 123 }
+    }
+    k.fields[:homepage][:min].should == 5
+    k.fields[:homepage][:max].should == 123
   end
 
 end # === describe :url
