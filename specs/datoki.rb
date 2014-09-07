@@ -122,7 +122,7 @@ describe :varchar do # ================================================
     clean_data[:title].should == ' my title '
   end
 
-  it "sets to nil if varchar is .strip.empty?" do
+  it "sets to nil if: varchar field, .strip.empty?, allow :null" do
     r = Class.new {
       include Datoki
       record_errors
