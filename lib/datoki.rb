@@ -55,6 +55,9 @@ module Datoki
       @schema_match  = false
       name = self.to_s.downcase.to_sym
       table(name) if Datoki.db.tables.include?(name)
+      if @schema.empty?
+        @schema_match = true
+      end
     end
 
     def schema_match?
