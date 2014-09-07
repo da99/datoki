@@ -274,8 +274,8 @@ describe "Datoki.db" do
   end
 
   it "requires a value if: value is '  ' (empty string), min = 1, allow null" do
-    r = @klass.create :title=>"The title", :text=>'   '
-    r.errors.should == {:body=>{:msg=>'Body is required.', :value=>nil}}
+    r = @klass.create :title=>"The title", :body=>'   '
+    r.errors.should == {:body=>{:msg=>'Body is required.', :value=>""}}
   end
 
   it "does not turn strip.empty? strings into nulls" do

@@ -521,6 +521,10 @@ module Datoki
         if val.nil? && !field[:allow][:null]
           fail! "!English_name is required."
         end
+
+        if field?(:text) && val.is_a?(String) && val.empty? && field[:min].to_i > 0
+          fail! "!English_name is required."
+        end
         # ================================
 
         # === check min, max ======
