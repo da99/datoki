@@ -75,7 +75,15 @@ module Datoki
         fail "Schema/table already defined: #{@table_name.inspect}"
       end
 
-      Datoki.db.schema(name).each { |pair|
+      db_schema = Datoki.db.schema(name)
+
+      if !db_schema
+        fail "Schema not found for: #{name.inspect}"
+      end
+
+      @table_name = name
+
+      db_schema.each { |pair|
         @schema[pair.first] = pair.last
       }
 
@@ -167,6 +175,7 @@ module Datoki
     end # === def field
 
     def schema_match target = :current
+      return true if !@table_name
       return true if schema_match?
 
       if target == :all # === do a schema match on entire table
