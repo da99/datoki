@@ -318,19 +318,16 @@ module Datoki
         disable :min, :max
 
       when [NilClass]
-        enable :null
+        if field?(:chars)
+          fail "A :min and :max is required for String fields."
+        end
 
-      when [NilClass, Fixnum]
         enable :null
-        field[:min] = args.last
 
       when [NilClass, Fixnum, Fixnum]
         field[:allow][:null] = true
         field[:min] = args[-2]
         field[:max] = args.last
-
-      when [Fixnum]
-        field[:min] = args.first
 
       when [Fixnum, Fixnum]
         field[:min], field[:max] = args

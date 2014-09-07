@@ -80,7 +80,7 @@ describe :varchar do # ================================================
     r = Class.new {
       include Datoki
       field(:title) {
-        varchar nil
+        varchar nil, 1, 123
       }
     }.create()
     r.clean_data[:title].should == nil
@@ -120,16 +120,6 @@ describe :varchar do # ================================================
     }.
     create(:title => ' my title ').
     clean_data[:title].should == ' my title '
-  end
-
-  it "sets to nil if: string field, .strip.empty?, allow :null, no :min set" do
-    r = Class.new {
-      include Datoki
-      record_errors
-      field(:title) { varchar nil }
-    }.create :title => '  '
-
-    r.clean_data[:title].should == nil
   end
 
 end # === describe Datoki ===
