@@ -94,6 +94,15 @@ module Datoki
       schema
     end
 
+    def html_escape
+      @html_escape ||= begin
+                         fields.inject({}) { |memo, (name, meta)|
+                           memo[name] = meta[:html_escape]
+                           memo
+                         }
+                       end
+    end
+
     def schema *args
       case args.size
 
@@ -170,6 +179,17 @@ module Datoki
       # === Ensure schema matches with field definition:
       schema_match
 
+      field[:html_escape] = case
+                            when field[:html_escape]
+                              field[:html_escape]
+                            when field?(:numeric)
+                              :number
+                            when field?(:chars)
+                              :string
+                            else
+                              fail "Unknown html_escape for: #{field[:name].inspect}"
+                            end
+
       @current_field = nil
     end # === def field
 
@@ -193,13 +213,13 @@ module Datoki
       db_schema = schema[@current_field]
 
       if db_schema && !field && db_schema[:type] != :datetime
-        fail Schema_Conflict, "#{name.inspect} has not been defined."
+        fail Schema_Conflict, "#{name}: #{name.inspect} has not been defined."
       end
 
       return true if field[:schema_match]
 
       if db_schema[:allow_null] != field[:allow][:null]
-        fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
+        fail Schema_Conflict, "#{name}: :allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
       end
 
       if field?(:chars)
@@ -214,38 +234,38 @@ module Datoki
 
       if db_schema.has_key?(:max_length)
         if field[:max] != db_schema[:max_length]
-          fail Schema_Conflict, ":max: #{db_schema[:max_length].inspect} != #{field[:max].inspect}"
+          fail Schema_Conflict, "#{name}: :max: #{db_schema[:max_length].inspect} != #{field[:max].inspect}"
         end
       end
 
       if !!db_schema[:primary_key] != !!field[:primary_key]
-        fail Schema_Conflict, ":primary_key: #{db_schema[:primary_key].inspect} != #{field[:primary_key].inspect}"
+        fail Schema_Conflict, "#{name}: :primary_key: #{db_schema[:primary_key].inspect} != #{field[:primary_key].inspect}"
       end
 
       # === match :type
       db_type = Datoki.db_type_to_ruby db_schema[:db_type], db_schema[:type]
       type    = field[:type]
       if db_type != type
-        fail Schema_Conflict, ":type: #{db_type.inspect} != #{type.inspect}"
+        fail Schema_Conflict, "#{name}: :type: #{db_type.inspect} != #{type.inspect}"
       end
 
       # === match :max_length
       db_max = db_schema[:max_length]
       max    = field[:max]
       if !db_max.nil? && db_max != max
-        fail Schema_Conflict, ":max_length: #{db_max.inspect} != #{max.inspect}"
+        fail Schema_Conflict, "#{name}: :max_length: #{db_max.inspect} != #{max.inspect}"
       end
 
       # === match :min_length
       db_min = db_schema[:min_length]
       min    = field[:min]
       if !db_min.nil? && db_min != min
-        fail Schema_Conflict, ":min_length: #{db_min.inspect} != #{min.inspect}"
+        fail Schema_Conflict, "#{name}: :min_length: #{db_min.inspect} != #{min.inspect}"
       end
 
       # === match :allow_null
       if db_schema[:allow_null] != field[:allow][:null]
-        fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
+        fail Schema_Conflict, "#{name}: :allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
       end
 
       field[:schema_match] = true
