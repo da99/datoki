@@ -200,13 +200,13 @@ describe "on :create" do
         clean_data[:values] = clean_data.values.join ', '
       end
 
-      field(:title) { varchar; default 'default title' }
+      field(:title) { varchar }
 
-      field(:body) { varchar; default 'default body' }
+      field(:body) { varchar }
 
     }.
-    create.
-    clean_data[:values].should == 'default title, default body'
+    create(:title=>'my title', :body=>'my body').
+    clean_data[:values].should == 'my title, my body'
   end
 
   it "runs after validation for a field" do
@@ -218,11 +218,10 @@ describe "on :create" do
         end
 
         varchar
-        default 'default body'
       }
     }.
-    create.
-    clean_data[:body].should == 'default body with new stuff'
+    create(:body=>'the body').
+    clean_data[:body].should == 'the body with new stuff'
   end
 
 end # === describe on :create
@@ -232,8 +231,8 @@ describe "on :update" do
   it "does not override old, unset fields with default values" do
     r = Class.new {
       include Datoki
-      field(:title) { varchar; default 'my title' }
-      field(:body) { varchar; default 'my body' }
+      field(:title) { varchar }
+      field(:body) { varchar }
     }.new(:title=>'old title')
     r.update :body=>'new body'
     r.clean_data.should == {:body=>'new body'}
@@ -331,18 +330,6 @@ describe "Datoki.db Schema_Conflict" do
         field(:title) { varchar 1, 200 }
       }
     }.message.should.match /:max: 123 != 200/i
-  end
-
-  it "raises Schema_Conflict when db default value is not (varchary, numeric) and datoki default is a different class" do
-    should.raise(Datoki::Schema_Conflict) {
-      Class.new {
-        include Datoki
-        table :datoki_test
-        field(:created_at) {
-          default "hello"
-        }
-      }
-    }.message.should.match /:default: #<Sequel::SQL::Constant @constant=>:CURRENT_TIMESTAMP> != "hello"/i
   end
 
 end # === describe Datoki.db

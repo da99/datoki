@@ -354,10 +354,6 @@ module Datoki
       }
     end
 
-    def default val
-      field[:default] = val
-    end
-
     def set_to *args
       field[:cleaners][:set_to] ||= []
       field[:cleaners][:set_to].concat args
