@@ -426,7 +426,7 @@ describe 'Datoki.db :new' do
         table :datoki_test
         field(:id) { primary_key }
         field(:parent_id) { smallint }
-        field(:body) { text 1, 222 }
+        field(:body) { text nil, 1, 222 }
       }.new
     }.message.should.match /:title has not been defined/
   end
