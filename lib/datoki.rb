@@ -500,10 +500,6 @@ module Datoki
         val! val.strip
       end
 
-      if val.is_a?(String) && field[:allow][:null] && val.empty?
-        val! nil
-      end
-
       catch :error_saved do
 
         if field?(:numeric) && val.is_a?(String)

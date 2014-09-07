@@ -274,7 +274,7 @@ describe "Datoki.db" do
   end
 
   it "does not turn strip.empty? strings into nulls" do
-    r = @klass.create :title=>"The title", :text=>'   '
+    r = @klass.create :title=>"The title", :body=>'   '
     r.clean_data[:body].should == ''
   end
 
