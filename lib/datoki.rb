@@ -216,7 +216,7 @@ module Datoki
         end
       end
 
-      if db_schema[:primary_key] != !field[:primary_key]
+      if !!db_schema[:primary_key] != !!field[:primary_key]
         fail Schema_Conflict, ":primary_key: #{db_schema[:primary_key].inspect} != #{field[:primary_key].inspect}"
       end
 
