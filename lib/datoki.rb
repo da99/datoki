@@ -190,10 +190,14 @@ module Datoki
         return true
       end # === if target
 
-      return true if field[:schema_match]
-
       name      = @current_field
       db_schema = schema[@current_field]
+
+      if db_schema && !field && db_schema[:type] != :datetime
+        fail Schema_Conflict, "#{name.inspect} has not been defined."
+      end
+
+      return true if field[:schema_match]
 
       if db_schema[:allow_null] != field[:allow][:null]
         fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
