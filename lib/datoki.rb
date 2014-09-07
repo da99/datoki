@@ -142,6 +142,11 @@ module Datoki
 
       fail("Type not specified for #{name.inspect}") if field[:type] == :unknown
 
+      # === check :allow_null and :min are not both set.
+      if field?(:chars) && field[:allow][:null] && field.has_key?(:min) && field[:min] < 1
+        fail "#{field[:type].inspect} can't be both: allow :null && :min = #{field[:min]}"
+      end
+
       # === Ensure schema matches with field definition:
       schema_match
 
@@ -164,6 +169,7 @@ module Datoki
       end # === if target
 
       return true if field[:schema_match]
+
       name      = @current_field
       db_schema = schema[@current_field]
 
@@ -217,11 +223,6 @@ module Datoki
       # === match :allow_null
       if db_schema[:allow_null] != field[:allow][:null]
         fail Schema_Conflict, ":allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
-      end
-
-      # === check :allow_null and :min are not both set.
-      if field?(:chars) && field[:allow][:null] && field.has_key?(:min) && field[:min] < 1
-        fail "#{field[:type].inspect} can't be both: allow :null && :min = #{field[:min]}"
       end
 
       field[:schema_match] = true
