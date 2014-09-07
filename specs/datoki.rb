@@ -360,7 +360,7 @@ describe "Datoki.db :varchar" do
       table "datoki_test"
       field(:id) { primary_key }
       field(:title) { varchar 1, 123 }
-      field(:body) { text 1, 3000 }
+      field(:body) { text nil, 1, 3000 }
     }
   }
 
