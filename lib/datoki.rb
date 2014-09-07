@@ -280,14 +280,21 @@ module Datoki
     def type name, *args
       field[:type] = name
 
-      if field?(:chars) && !field?(:text)
-        field[:max] ||= 255
-        enable :strip
-      end
+      if field? :chars
 
-      if field?(:chars) && schema[name] && !schema[name][:allow_null]
-        field[:min] = 1
-      end
+        enable :strip
+
+        if field?(:text)
+          field[:max] ||= 4000
+        else
+          field[:max] ||= 255
+        end
+
+        if schema[name] && !schema[name][:allow_null]
+          field[:min] = 1
+        end
+
+      end # === if field? :chars
 
       case args.map(&:class)
 
