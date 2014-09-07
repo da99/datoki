@@ -268,7 +268,10 @@ describe "Datoki.db" do
     r.errors.should == {:title=>{:msg=>'Title is required.', :value=>nil}}
   end
 
-  it "requires field if :required = true"
+  it "requires a value if: value is '  ' (empty string), min = 1, allow null" do
+    r = @klass.create :title=>"The title", :text=>'   '
+    r.errors.should == {:body=>{:msg=>'Body is required.', :value=>nil}}
+  end
 
   it "does not turn strip.empty? strings into nulls"
 
