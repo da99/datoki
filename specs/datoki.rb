@@ -399,12 +399,12 @@ describe 'Datoki.db :new' do
   before {
     CACHE[:datoki_db_new] ||= begin
                                 reset_db <<-EOF
-                                      CREATE TABLE "datoki_test" (
-                                        id serial NOT NULL PRIMARY KEY,
-                                        parent_id smallint NOT NULL,
-                                        title varchar(123) NOT NULL,
-                                        body  text
-                                      );
+                                  CREATE TABLE "datoki_test" (
+                                    id serial NOT NULL PRIMARY KEY,
+                                    parent_id smallint NOT NULL,
+                                    title varchar(123) NOT NULL,
+                                    body  text
+                                  );
                                 EOF
                               end
   }
@@ -424,5 +424,45 @@ describe 'Datoki.db :new' do
 end # === describe Datoki.db :new
 
 
+describe :url do
+
+  before {
+    CACHE[:datoki_db_url] ||= begin
+                                reset_db <<-EOF
+                                  CREATE TABLE "datoki_test" (
+                                    id       serial       NOT NULL PRIMARY KEY,
+                                    homepage varchar(255) NOT NULL
+                                  );
+                                EOF
+                              end
+
+    @klass = Class.new {
+      include Datoki
+      field(:id) { primary_key }
+      field(:homepage) { url }
+    }
+  }
+
+  it "sets :type to :varchar" do
+    @klass.fields[:homepage][:type].should == :varchar
+  end
+
+  it "sets :max to 255" do
+    @klass.fields[:homepage][:max].should == 255
+  end
+
+  it "sets :min to 0" do
+    @klass.fields[:homepage][:min].should == 0
+  end
+
+  it "sets allow :null to false" do
+    @klass.fields[:homepage][:allow][:null].should == false
+  end
+
+  it "sets :html_escape to :url" do
+    @klass.fields[:homepage][:html_escape].should == :url
+  end
+
+end # === describe :url
 
 

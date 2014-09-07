@@ -280,6 +280,18 @@ module Datoki
       type :text, *args
     end
 
+    def url *args
+      field[:html_escape] = :url
+      case args.map(&:class)
+      when []
+        varchar 0, 255
+      when [NilClass]
+        varchar nil, 1, 255
+      else
+        varchar *args
+      end
+    end
+
     Types.each { |name|
       eval <<-EOF
         def #{name} *args
