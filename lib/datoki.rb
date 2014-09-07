@@ -262,6 +262,15 @@ module Datoki
 
     def primary_key
       field[:primary_key] = true
+      if field?(:unknown)
+        if schema[field[:name]]
+          type schema[field[:name]][:type]
+        else
+          type :integer
+        end
+      end
+
+      true
     end
 
     def text *args
