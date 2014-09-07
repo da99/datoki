@@ -210,7 +210,6 @@ module Datoki
       end
 
       if db_schema.has_key?(:max_length)
-        field[:max] = db_schema[:max_length]
         if field[:max] != db_schema[:max_length]
           fail Schema_Conflict, ":max: #{db_schema[:max_length].inspect} != #{field[:max].inspect}"
         end

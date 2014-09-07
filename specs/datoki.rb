@@ -330,7 +330,7 @@ describe "Datoki.db Schema_Conflict" do
         table :datoki_test
         field(:title) { varchar 1, 200 }
       }
-    }.message.should.match /:max_length: 123 != 200/i
+    }.message.should.match /:max: 123 != 200/i
   end
 
   it "raises Schema_Conflict when db default value is not (varchary, numeric) and datoki default is a different class" do
