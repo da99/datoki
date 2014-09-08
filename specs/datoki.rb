@@ -70,7 +70,7 @@ describe :varchar do # ================================================
         include Datoki
         field :title do
           varchar
-          match /^[a-zA-Z0-9]+$/i, "Title must be only: alphanumeric"
+          match /\A[a-zA-Z0-9]+\z/i, "Title must be only: alphanumeric"
         end
       }.create :title => '$! title'
     }.message.should.match /Title must be only: alphanumeric/
