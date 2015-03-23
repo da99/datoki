@@ -15,6 +15,10 @@ module Datoki
   Numeric_Types = [:smallint, :integer, :bigint, :decimal, :numeric]
   Types         = Char_Types + Numeric_Types + [:datetime]
 
+  Key_Not_Found = lambda { |hash, key|
+    fail ArgumentError, "Key not found: #{key.inspect}"
+  }
+
   class << self
 
     def included klass
@@ -456,6 +460,7 @@ module Datoki
   def initialize data = nil
     if self.class.on_doc && data
       @raw = data
+      @raw.default_proc = Key_Not_Found
 
       self.class.on_doc.each { |raw_arr|
 
@@ -503,6 +508,37 @@ module Datoki
 
   def clean_data
     @clean_data ||= {}
+  end
+
+  def clean! name, *args
+    if (!clean.has_key?(name) || !clean[name] ) && (!@raw.has_key?(name) || !@raw[name])
+      fail ArgumentError, "#{name.inspect} is not set."
+    end
+    clean name, *args
+  end
+
+  def clean *args
+    case
+    when args.empty?
+      @clean ||= begin
+                   h = {}
+                   h.default_proc = Key_Not_Found
+                   h
+                 end
+    else
+      name = args.shift
+      while cond = args.shift
+        case cond
+        when :string
+          clean[name] = @raw[name] if !clean.has_key?(name)
+          if !clean[name].is_a?(String)
+            fail ArgumentError, "#{name.inspect} must be a String: #{clean[name].inspect}"
+          end
+        else
+          send(cond)
+        end
+      end
+    end
   end
 
   def new_data
