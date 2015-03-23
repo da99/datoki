@@ -527,12 +527,17 @@ module Datoki
                  end
     else
       name = args.shift
+      return self if !clean.has_key?(name) && !@raw.has_key?(name)
+      clean[name] = @raw[name] if !clean.has_key?(name)
       while cond = args.shift
         case cond
         when :string
-          clean[name] = @raw[name] if !clean.has_key?(name)
           if !clean[name].is_a?(String)
             fail ArgumentError, "#{name.inspect} must be a String: #{clean[name].inspect}"
+          end
+        when :integer, :Fixnum
+          if !clean[name].is_a?(Fixnum)
+            fail ArgumentError, "#{name.inspect} must be a Fixnum: #{clean[name].inspect}"
           end
         else
           send(cond)
