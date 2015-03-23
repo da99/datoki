@@ -28,4 +28,37 @@ describe :on do
       result.should == :happy
   end # === it executes proc if condition is true
 
+  it "executes nested :on if condition matches" do
+    c = Class.new {
+      include Datoki
+
+      RESULT = []
+
+      attr_reader :result
+
+      on :true? do
+        on :filled? do
+          @result ||= []
+          @result << :found
+        end
+        on :false? do
+          fail
+        end
+      end
+
+      def false?
+        false
+      end
+
+      def filled?
+        true
+      end
+
+      def true?
+        true
+      end
+    }
+    c.new({}).result.should == [:found]
+  end # === it executes nested :on if condition matches
+
 end # === describe :on

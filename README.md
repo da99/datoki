@@ -9,5 +9,33 @@ A Ruby gem for managing validation and records using PostgreSQL.
 
 ## Usage
 
-No coming any time soon.
+```ruby
+  class Computer
+    include Datoki
+
+    field(:id)   { primary_key }
+    field(:name) { varchar }
+    field(:desc) { text nil, 1, 955 }
+
+    on :create_or_update? do
+
+      on :create? do
+        clean :name!, :desc
+      end
+
+      on :update? do
+
+        clean :name, :desc
+
+        on :special? do
+          skip_db
+          # do special processing
+        end
+      end
+
+    end # === :create_or_update?
+
+
+  end # === class
+```
 

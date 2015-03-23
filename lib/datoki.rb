@@ -550,6 +550,20 @@ module Datoki
     @new_data ||= {}
   end
 
+  def on *args
+    fail ArgumentError, "No conditions." if args.empty?
+    yield if args.all? { |cond|
+      case cond
+      when Symbol
+        send(cond)
+      when TrueClass, FalseClass
+        cond
+      else
+        fail ArgumentError, "Unknown value: #{cond.inspect}"
+      end
+    }
+  end
+
   def fail! msg
     err_msg = msg.gsub(/!([a-z\_\-]+)/i) { |raw|
       name = $1
