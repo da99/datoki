@@ -271,7 +271,15 @@ module Datoki
       field[:schema_match] = true
     end
 
-    def on action, meth_name_sym
+    attr_reader :on_doc
+    def on *args
+      return(field_on *args) if !block_given?
+      @on_doc ||= []
+      @on_doc << [args, Proc.new]
+      self
+    end
+
+    def field_on action, meth_name_sym
       fail "Invalid action: #{action.inspect}" unless Actions.include? action
       if field
         field[:on][action] ||= {}
@@ -446,13 +454,36 @@ module Datoki
   # ================= Instance Methods ===============
 
   def initialize data = nil
-    @data       = nil
-    @new_data   = nil
-    @field_name = nil
-    @clean_data = nil
-    @errors     = nil
+    if self.class.on_doc && data
+      @raw = data
 
-    self.class.schema_match(:all)
+      self.class.on_doc.each { |raw_arr|
+
+        conds = raw_arr.first
+        func  = raw_arr.last
+        instance_eval(&func) if conds.all? { |cond|
+          case cond
+          when Symbol
+            send(cond)
+          when Proc
+            cond.arity == 1 ? cond.call(@raw) : instance_eval(&cond)
+          when TrueClass, FalseClass
+            cond
+          else
+            fail ArgumentError, "Unknown: #{cond.inspect}"
+          end
+        }
+
+      } # === on_doc.each
+    else
+      @data       = nil
+      @new_data   = nil
+      @field_name = nil
+      @clean_data = nil
+      @errors     = nil
+
+      self.class.schema_match(:all)
+    end
   end
 
   def errors
