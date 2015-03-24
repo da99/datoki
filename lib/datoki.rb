@@ -129,12 +129,16 @@ module Datoki
       end
     end
 
-    def field? *args
-      inspect_field?(:type, field[:name], *args)
+    def pseudo
+      fields[@current_field][:pseudo] = true
     end
 
     def allow sym
       fields[@current_field][:allow][sym] = true;
+    end
+
+    def field? *args
+      inspect_field?(:type, field[:name], *args)
     end
 
     def field *args
@@ -221,6 +225,7 @@ module Datoki
 
       return true if db_schema && !field
       return true if field[:schema_has_been_matched]
+      return true if field[:pseudo]
 
       if db_schema[:allow_null] != field[:allow][:null]
         fail Schema_Conflict, "#{name}: :allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
@@ -505,6 +510,7 @@ module Datoki
 
       if !@skips[:db] && !self.class.schema.empty?
 
+        final = db_clean
         begin
           case
 
@@ -514,12 +520,12 @@ module Datoki
           when update?
 
             DB[self.class.table].
-              where(primary_key[:name] => @clean.delete(primary_key[:name])).
-              update(@clean)
+              where(primary_key[:name] => final.delete(primary_key[:name])).
+              update(final)
 
           when delete?
             DB[self.class.table].
-              where(primary_key[:name] => @clean.delete(primary_key[:name])).
+              where(primary_key[:name] => final.delete(primary_key[:name])).
               delete
 
           end
@@ -529,7 +535,7 @@ module Datoki
           self.class.fields.each { |f|
             if e.message["'\"#{f}_"]
               field_name f
-              fail! "!English_name already taken: #{@clean[f]}"
+              fail! "!English_name already taken: #{final[f]}"
             end
           }
           raise e
@@ -545,6 +551,12 @@ module Datoki
 
   def error?
     @error && !@error.empty?
+  end
+
+  def db_clean
+    @clean.select { |k, v|
+      !self.class.fields[k][:pseudo]
+    }
   end
 
   def clean! *args
@@ -813,8 +825,9 @@ module Datoki
 
   def db_insert
     k = :db_insert
+    final = db_clean
     fail "Already inserted." if @db_ops[k]
-    @data = (@data || {}).merge(TABLE().returning.insert(@clean).first)
+    @data = (@data || {}).merge(TABLE().returning.insert(final).first)
     @db_ops[k] = true
   end
 
