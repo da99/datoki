@@ -28,7 +28,7 @@ A Ruby gem for managing validation and records using PostgreSQL.
         clean :name, :desc
 
         on :special? do
-          skip_db
+          skip :db
           # do special processing
         end
       end
