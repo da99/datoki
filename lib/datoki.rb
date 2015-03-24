@@ -313,7 +313,7 @@ module Datoki
       field[:html_escape] = :href
       case args.map(&:class)
       when []
-        varchar 0, 255
+        varchar 1, 255
       when [NilClass]
         varchar nil, 1, (schema[field[:name]] ? schema[field[:name]][:max_length] : 255)
       else
@@ -463,7 +463,7 @@ module Datoki
     @skips      = {}
 
     if unknown
-      if unknown.has_key?(primary_key[:name])
+      if unknown.keys.all? { |f| self.class.fields.has_key?(f) }
         @data = unknown
         @data.default_proc = Key_Not_Found
       else
@@ -499,11 +499,11 @@ module Datoki
 
         case
         when create?
-          insert_into_table
+          insert_into_table unless !respond_to?(:insert_into_table)
         when update?
-          alter_record
+          alter_record unless !respond_to?(:alter_record)
         when delete?
-          delete_from_table
+          delete_from_table unless !respond_to?(:delete_from_table)
         end unless @skips[:db]
       end
     end # === if @raw
@@ -793,6 +793,7 @@ module Datoki
   end
 
   def create?
+    (@raw.has_key?(:create) && @raw[:create]) ||
     @raw.has_key?(primary_key[:name]) && !@raw[primary_key[:name]]
   end
 

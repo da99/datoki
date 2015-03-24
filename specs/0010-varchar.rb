@@ -6,7 +6,7 @@ describe :varchar do # ================================================
       Class.new {
         include Datoki
         field(:title) { varchar }
-      }.create
+      }.create({})
     }.message.should.match /Title is required/i
   end
 

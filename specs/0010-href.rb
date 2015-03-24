@@ -27,7 +27,7 @@ describe :href do
     @klass.fields[:homepage][:max].should == 255
   end
 
-  it "sets :min to 0" do
+  it "sets :min to 1" do
     @klass.fields[:homepage][:min].should == 1
   end
 
