@@ -533,6 +533,16 @@ module Datoki
     @error && !@error.empty?
   end
 
+  def clean! *args
+    args.each { |name|
+      if @raw[name].nil? && (!@clean || @clean[name].nil?)
+        fail ArgumentError, "#{name.inspect} is not set."
+      else
+        clean name
+      end
+    }
+  end
+
   def clean *args
     @clean ||= {}
 
@@ -547,10 +557,8 @@ module Datoki
 
     name = args.first
 
-    if (real_name = self.class.fields_as_required[name]) && @raw[real_name].nil? && @clean[real_name].nil?
-      fail ArgumentError, "#{real_name.inspect} is not set."
-    else
-      name = real_name || name
+    if (real_name = self.class.fields_as_required[name])
+      return(clean! real_name) 
     end
 
     @clean[name] = @raw[name] if !clean.has_key?(name) && @raw.has_key?(name)
