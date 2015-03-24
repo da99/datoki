@@ -478,13 +478,18 @@ module Datoki
 
       if !@clean
         @raw.each { |k, v|
-          if self.class.fields.has_key?(k)
-            has_default = schema[k] && schema[k][:default]
-            clean(k) 
-            @clean.delete(k) if @clean[k].nil? && has_default
-          end
+          next unless self.class.fields.has_key?(k)
+          has_default = schema[k] && schema[k][:default]
+          clean(k) 
+          @clean.delete(k) if @clean[k].nil? && has_default
         }
       end
+
+      self.class.fields.each { |k, v|
+        if (!@clean || @clean[k].nil?) && !v[:allow][:null] && !v[:primary_key]
+          fail ArgumentError, "#{k.inspect} is not set."
+        end
+      }
 
       begin
         case
@@ -503,14 +508,14 @@ module Datoki
             where(primary_key[:name] => @clean.delete(primary_key[:name])).
             delete
 
-        end unless @skips[:db]
+        end if !@skips[:db] && !self.class.schema.empty?
 
       rescue Sequel::UniqueConstraintViolation => e
 
           self.class.fields.each { |f|
             if e.message["'\"#{f}_"]
               field_name f
-              fail! "!English_name already taken: #{@clean[f]}")
+              fail! "!English_name already taken: #{@clean[f]}"
             end
           }
           raise e
@@ -752,18 +757,6 @@ module Datoki
 
   def field? *args
     self.class.inspect_field? :type, field_name, *args
-  end
-
-  def create new_data
-    @new_data = new_data
-    run :create
-    self
-  end
-
-  def update new_data
-    @new_data = new_data
-    run :update
-    self
   end
 
   def primary_key

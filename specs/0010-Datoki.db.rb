@@ -18,6 +18,10 @@ describe "Datoki.db" do
       field(:id) { integer; primary_key }
       field(:title) { varchar 1, 123 }
       field(:body) { text nil, 1, 123 }
+
+      def create
+        skip :db
+      end
     }
   }
 

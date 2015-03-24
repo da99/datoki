@@ -6,7 +6,10 @@ describe :clean do
       include Datoki
 
       field(:nick_name) { varchar 1,50 }
-      on(:happy?) { clean :nick_name }
+      def create
+        clean :nick_name
+        skip :db
+      end
 
       def happy?
         true
@@ -24,12 +27,9 @@ describe :clean do
       field(:nick_name) { varchar 3, 255 }
       field(:age) { smallint; allow :null }
 
-      on :happy? do
+      def create
         clean :nick_name, :age
-      end
-
-      def happy?
-        true
+        skip :db
       end
     }
     c.create(:nick_name=>'Wiley').
@@ -41,17 +41,13 @@ describe :clean do
       include Datoki
 
       field(:name) { varchar }
-      on :happy? do
+      def create
         clean :name!
-      end
-
-      def happy?
-        true
       end
     }
 
     should.raise(ArgumentError) {
-      c.new(:happy=>true, :nick=>'Bob')
+      c.create(:nick=>'Bob')
     }.message.should.match /:name is not set/
   end # === it fails w/ArgumentError if underfined
 
