@@ -51,6 +51,7 @@ module Datoki
     attr_reader :ons, :fields, :fields_as_required
 
     def initialize_def_field
+      @on_doc             = []
       @ons                = {}
       @fields             = {} # Ex: {:name=>{}, :age=>{}}
       @fields_as_required = {} # Ex: {:name!=>:name}
@@ -275,7 +276,6 @@ module Datoki
     attr_reader :on_doc
     def on *args
       return(field_on *args) if !block_given?
-      @on_doc ||= []
       @on_doc << [args, Proc.new]
       self
     end
@@ -445,9 +445,9 @@ module Datoki
       self
     end
 
-    def create h = {}
-      r = new
-      r.create h
+    def create raw
+      raw[:create] = self
+      new raw
     end
 
   end # === Def_Field =====================================================
@@ -455,11 +455,24 @@ module Datoki
   # ================= Instance Methods ===============
 
   attr_reader :error
-  def initialize data = nil
-    if self.class.on_doc && data
-      @raw = data
-      @raw.default_proc = Key_Not_Found
+  def initialize unknown = nil
+    @data       = nil
+    @field_name = nil
+    @clean      = nil
+    @error      = nil
+    @skips      = {}
 
+    if unknown
+      if unknown.has_key?(primary_key[:name])
+        @data = unknown
+        @data.default_proc = Key_Not_Found
+      else
+        @raw = unknown
+        @raw.default_proc = Key_Not_Found
+      end
+    end
+
+    if @raw
       self.class.on_doc.each { |raw_arr|
 
         conds = raw_arr.first
@@ -478,15 +491,28 @@ module Datoki
         }
 
       } # === on_doc.each
-    else
-      @data       = nil
-      @new_data   = nil
-      @field_name = nil
-      @clean      = nil
-      @error     = nil
 
-      self.class.schema_match(:all)
-    end
+      if !@clean
+        @raw.each { |k, v|
+          clean(k) if self.class.fields.has_key?(k)
+        }
+
+        case
+        when create?
+          insert_into_table
+        when update?
+          alter_record
+        when delete?
+          delete_from_table
+        end unless @skips[:db]
+      end
+    end # === if @raw
+
+    self.class.schema_match(:all)
+  end
+
+  def skip name
+    @skips[name] = true
   end
 
   def error?
@@ -531,8 +557,10 @@ module Datoki
     end
 
     clean[name] = @raw[name] unless clean.has_key?(name)
-    if field.has_key?(:default) && !clean.has_key?(name) || !clean[name]
-      clean[name] = field[:default]
+
+    if self.class.schema[name][:default] && (!clean.has_key?(name) || !clean[name])
+      clean.delete name
+      return self.class.schema[name][:default]
     end
 
     if clean[name].is_a?(String) && field[:allow][:strip]
@@ -711,7 +739,7 @@ module Datoki
       end
     }
 
-    @error = {:msg=>err_msg, :value=>clean_name[field_name]}
+    @error = {:field_name=>field_name, :msg=>err_msg, :value=>clean[field_name]}
     throw :invalid, self
   end
 
@@ -762,19 +790,19 @@ module Datoki
   end
 
   def create?
-    !@raw[primary_key[:name]]
+    @raw.has_key?(primary_key[:name]) && !@raw[primary_key[:name]]
   end
 
   def read?
-    !!@raw[:read]
+    !!(@raw.has_key?(:read) && @raw[:read])
   end
 
   def update?
-    !!@raw[:update]
+    !!(@raw.has_key?(:update) && @raw[:update])
   end
 
   def delete?
-    !!@rarw[:delete]
+    !!(@raw.has_key?(:delete) && !@raw[:delete])
   end
 
 end # === module Datoki ===

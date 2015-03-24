@@ -14,7 +14,6 @@ describe "Datoki.db" do
 
     @klass = Class.new {
       include Datoki
-      record_errors
       table "datoki_test"
       field(:id) { integer; primary_key }
       field(:title) { varchar 1, 123 }
@@ -34,19 +33,22 @@ describe "Datoki.db" do
     }.message.should.match /:allow_null: true != false/
   end
 
-  it "requires field if value = null and default = null and :allow_null = false" do
-    r = @klass.create :title=>nil, :body=>"hiya"
-    r.errors.should == {:title=>{:msg=>'Title is required.', :value=>nil}}
+  it "requires field if value = null and :allow_null = false" do
+    should.raise(ArgumentError) {
+      @klass.create :title=>nil, :body=>"hiya"
+    }.message.should.match /:title is not set/
   end
 
   it "requires a value if: :text field, value = (empty string), min = 1, allow null" do
-    r = @klass.create :title=>"The title", :body=>'   '
-    r.errors.should == {:body=>{:msg=>'Body is required.', :value=>""}}
+    r = catch(:invalid) {
+      @klass.create :title=>"The title", :body=>'   '
+    }
+    r.error.should == {:field_name=>:body, :msg=>'Body is required.', :value=>""}
   end
 
   it "does not turn strip.empty? strings into nulls" do
-    r = @klass.create :title=>"The title", :body=>'   '
-    r.clean_data[:body].should == ''
+    r = catch(:invalid) { @klass.create :title=>"The title", :body=>'   ' }
+    r.clean[:body].should == ''
   end
 
   it "imports field names into class" do
@@ -57,9 +59,9 @@ describe "Datoki.db" do
     @klass.fields.values.map { |meta| meta[:type] }.should == [:integer, :varchar, :text]
   end
 
-  it "removes field from :clean_data if set to nil and database has a default value" do
+  it "removes field from :clean data if set to nil and database has a default value" do
     r = @klass.create :title=>'hello', :body=>nil
-    r.clean_data.keys.should == [:title]
+    r.clean.keys.should == [:title]
   end
 
 end # === describe Datoki.db
