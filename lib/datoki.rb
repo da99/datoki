@@ -58,8 +58,6 @@ module Datoki
       @schema             = {}
       @schema_match       = false
       @table_name         = nil
-      name = self.to_s.downcase.to_sym
-      table(name) if Datoki.db.tables.include?(name)
     end
 
     def schema_match?
@@ -141,7 +139,10 @@ module Datoki
 
     def field *args
       # === Setup a default table if none specified:
-      table(self.to_s.downcase.to_sym) unless @table_name
+      if !@table_name
+        t_name = self.to_s.downcase.to_sym
+        table(name) if Datoki.db.tables.include?(t_name)
+      end
 
       return fields[@current_field] if args.empty?
       return fields[args.first] unless block_given?
@@ -486,8 +487,9 @@ module Datoki
         }
       end
 
+      fail "No clean values found." if (!@clean || @clean.empty?)
+
       if !@skips[:db] && !self.class.schema.empty?
-        fail "No clean values found." if (!@clean || @clean.empty?)
 
         begin
           case

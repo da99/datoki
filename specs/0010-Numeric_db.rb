@@ -17,7 +17,7 @@ describe 'Datoki.db number' do
   it "does not set :min = 1" do
     Class.new {
       include Datoki
-      table "datoki_test"
+      table :datoki_test
       field(:parent_id) { smallint }
     }.
     fields[:parent_id][:min].should == nil

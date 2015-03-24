@@ -7,6 +7,9 @@ describe Numeric do
                                   include Datoki
                                   field(:id)  { primary_key }
                                   field(:age) { smallint 1, 150 }
+                                  def create
+                                    clean :age
+                                  end
                                 }
                               end
   }
@@ -31,8 +34,11 @@ describe Numeric do
       include Datoki
       field(:id) { primary_key }
       field(:age) { smallint nil, 1, 99 }
+      def create
+        clean :age
+      end
     }.create(:age=>nil).
-    clean[:age].should == nil
+    clean.should == {:age=>nil}
   end
 
   it "allows nil in an array" do
@@ -40,8 +46,11 @@ describe Numeric do
       include Datoki
       field(:id) { primary_key }
       field(:age) { smallint [nil, 1,2,3,4] }
+      def create
+        clean :age
+      end
     }.create(:age=>nil).
-    clean[:age].should == nil
+    clean.should == {:age=>nil}
   end
 
   it "allows to specify an Array of possible values" do
@@ -49,6 +58,9 @@ describe Numeric do
       include Datoki
       field(:id) { primary_key }
       field(:age) { smallint [1,2,3,4] }
+      def create
+        clean :age
+      end
     }.create(:age=>2).
     clean[:age].should == 2
   end
@@ -59,6 +71,9 @@ describe Numeric do
         include Datoki
         field(:id) { primary_key }
         field(:num) { smallint [1,2,3,4] }
+        def create
+          clean :num
+        end
       }.create :num=>0
     }.error[:msg].should.match /Num can only be: 1, 2, 3, 4/
   end
