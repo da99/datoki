@@ -468,7 +468,6 @@ module Datoki
         @data.default_proc = Key_Not_Found
       else
         @raw = unknown
-        @raw.default_proc = Key_Not_Found
       end
     end
 
@@ -498,11 +497,17 @@ module Datoki
         }
       end
 
+      schema = self.class.schema
       if create?
+        # === Did the programmer forget to set the value?:
         self.class.fields.each { |k, meta|
-          if !clean.has_key?(k) && !meta[:allow][:null] && !meta[:primary_key]
+          has_default = schema[k] && schema[k][:default]
+          if clean[k].nil? && !meta[:allow][:null] && !meta[:primary_key] && !has_default
             fail ArgumentError, "#{k.inspect} is not set."
           end
+
+          # === Should we let the DB set the value?
+          @clean.delete(k) if @clean[k].nil? && has_default
         }
       end
 
@@ -528,48 +533,32 @@ module Datoki
   end
 
   def clean *args
-    if args.empty?
-      @clean ||= begin
-                   h = {}
-                   h.default_proc = Key_Not_Found
-                   h
-                 end
-      return @clean
-    end
+    @clean ||= {}
 
+    return @clean if args.empty?
+
+    # === Handle required fields:
+    # Example:
+    #   :name!, :age!
     if args.size > 1
       return args.each { |f| clean f }
     end
 
-    name     = args.first
-    required = false
+    name = args.first
 
-    if self.class.fields_as_required[name]
-      name = self.class.fields_as_required[name]
-      required = true
+    if (real_name = self.class.fields_as_required[name]) && @raw[real_name].nil? && @clean[real_name].nil?
+      fail ArgumentError, "#{real_name.inspect} is not set."
+    else
+      name = real_name || name
     end
+
+    @clean[name] = @raw[name] if !clean.has_key?(name) && @raw.has_key?(name)
+
+    # === Skip cleaning if key is not set:
+    return nil unless @clean.has_key?(name)
 
     field_name(name)
-    f_meta   = self.class.fields[name]
-    required = true if (!field[:allow][:null] && (!@raw.has_key?(name) || @raw[name] == nil))
-
-    # === Did the programmer forget to set the value?:
-    if required && (!@raw.has_key?(name) || @raw[name].nil?)
-      fail ArgumentError, "#{name.inspect} is not set."
-    end
-
-    # === Skip this if nothing is set and is null-able:
-    if !required && field[:allow][:null] && !@raw.has_key?(name) && !clean.has_key?(name)
-      return nil
-    end
-
-    clean[name] = @raw[name] unless clean.has_key?(name)
-
-    # === Should we let the DB set the value?
-    if self.class.schema[name] && self.class.schema[name][:default] && (!clean.has_key?(name) || !clean[name])
-      clean.delete name
-      return self.class.schema[name][:default]
-    end
+    f_meta = self.class.fields[name]
 
     # === Strip the value:
     if clean[name].is_a?(String) && field[:allow][:strip]

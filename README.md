@@ -20,7 +20,7 @@ A Ruby gem for managing validation and records using PostgreSQL.
     on :create_or_update? do
 
       on :create? do
-        clean :name!, :desc
+        clean :name, :desc
       end
 
       on :update? do
