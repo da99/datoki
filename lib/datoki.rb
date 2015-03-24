@@ -143,7 +143,7 @@ module Datoki
 
     def field *args
       # === Setup a default table if none specified:
-      if !@table_name
+      if !@table_name && Datoki.db
         t_name = self.to_s.downcase.to_sym
         table(t_name) if Datoki.db.tables.include?(t_name)
       end
