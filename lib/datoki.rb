@@ -133,6 +133,10 @@ module Datoki
       inspect_field?(:type, field[:name], *args)
     end
 
+    def allow sym
+      fields[@current_field][:allow][sym] = true;
+    end
+
     def field *args
       return fields[@current_field] if args.empty?
       return fields[args.first] unless block_given?
@@ -140,7 +144,7 @@ module Datoki
       name = args.first
 
       fail "#{name.inspect} already defined." if fields[name]
-      fields_as_required << :"#{name}!"
+      fields_as_required[:"#{name}!"] = name
 
       fields[name] = {
         :name         => name,
@@ -511,6 +515,9 @@ module Datoki
       required = true
     end
 
+    field_name name
+    f_meta = self.class.fields[name]
+
     if (!field[:allow][:null] && (!@raw.has_key?(name) || @raw[name] == nil))
       required = true
     end
@@ -519,8 +526,9 @@ module Datoki
       fail ArgumentError, "#{name.inspect} is not set."
     end
 
-    field_name name
-    f_meta = self.class.fields[name]
+    if !required && field[:allow][:null] && !@raw.has_key?(name) && !clean.has_key?(name)
+      return nil
+    end
 
     clean[name] = @raw[name] unless clean.has_key?(name)
     if field.has_key?(:default) && !clean.has_key?(name) || !clean[name]
@@ -704,7 +712,7 @@ module Datoki
     }
 
     @error = {:msg=>err_msg, :value=>clean_name[field_name]}
-    throw :invalid
+    throw :invalid, self
   end
 
   def field_name *args
@@ -713,6 +721,7 @@ module Datoki
       fail "Field name not set." unless @field_name
       @field_name
     when 1
+      fail ArgumentError, "Unknown field: #{args.first.inspect}" unless self.class.fields[args.first]
       @field_name = args.first
     else
       fail "Unknown args: #{args.inspect}"
