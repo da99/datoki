@@ -511,14 +511,23 @@ module Datoki
         }
       end
 
-      case
-      when create?
-        insert_into_table unless !respond_to?(:insert_into_table)
-      when update?
-        alter_record unless !respond_to?(:alter_record)
-      when delete?
-        delete_from_table unless !respond_to?(:delete_from_table)
-      end unless @skips[:db]
+      begin
+        case
+        when create?
+          insert_into_table unless !respond_to?(:insert_into_table)
+        when update?
+          alter_record unless !respond_to?(:alter_record)
+        when delete?
+          delete_from_table unless !respond_to?(:delete_from_table)
+        end unless @skips[:db]
+      rescue Sequel::UniqueConstraintViolation => e
+        begin
+          new_record = TABLE.returning.insert(insert_data).first
+        rescue Sequel::UniqueConstraintViolation => e
+          raise e unless e.message['"screen_name_unique_idx"']
+          raise self.class::Invalid.new(self, "Screen name already taken: #{clean_data[:screen_name]}")
+        end
+      end
     end # === if @raw
 
     self.class.schema_match(:all)
