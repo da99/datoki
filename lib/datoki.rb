@@ -496,16 +496,24 @@ module Datoki
         @raw.each { |k, v|
           clean(k) if self.class.fields.has_key?(k)
         }
-
-        case
-        when create?
-          insert_into_table unless !respond_to?(:insert_into_table)
-        when update?
-          alter_record unless !respond_to?(:alter_record)
-        when delete?
-          delete_from_table unless !respond_to?(:delete_from_table)
-        end unless @skips[:db]
       end
+
+      if create?
+        self.class.fields.each { |k, meta|
+          if !clean.has_key?(k) && !meta[:allow][:null]
+            fail ArgumentError, "#{k.inspect} is not set."
+          end
+        }
+      end
+
+      case
+      when create?
+        insert_into_table unless !respond_to?(:insert_into_table)
+      when update?
+        alter_record unless !respond_to?(:alter_record)
+      when delete?
+        delete_from_table unless !respond_to?(:delete_from_table)
+      end unless @skips[:db]
     end # === if @raw
 
     self.class.schema_match(:all)
