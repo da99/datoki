@@ -27,4 +27,34 @@ describe :string do
     DB[:datoki_test].all.should == [{:id=>1, :ip=>'127.0.0.2'}]
   end # === it treats special PG types as a string
 
+  it "uses :big error msg" do
+    catch(:invalid) {
+      Class.new {
+        include Datoki
+        field(:note) {
+          string_ish 1,5
+          big '{{English name}} can\'t be bigger than {{max}}.'
+        }
+        def create
+          clean :note
+        end
+      }.create :note=>"1234567"
+    }.error[:msg].should == "Note can\'t be bigger than 5."
+  end # === it uses :big error msg
+
+  it "uses :small error msg" do
+    catch(:invalid) {
+      Class.new {
+        include Datoki
+        field(:note) {
+          string_ish 2,5
+          small '{{English name}} can\'t be smaller than {{min}}.'
+        }
+        def create
+          clean :note
+        end
+      }.create :note=>"1"
+    }.error[:msg].should == "Note can\'t be smaller than 2."
+  end # === it uses :small error msg
+
 end # === describe :string

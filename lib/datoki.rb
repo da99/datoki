@@ -390,7 +390,7 @@ module Datoki
 
     end # === def
 
-    [:mis_match, :required, :too_small, :too_big].each { |name|
+    [:mis_match, :small, :big].each { |name|
       eval <<-EOF
         def #{name} msg
           field[:error_msgs] ||= {}
@@ -641,14 +641,14 @@ module Datoki
 
       when [Fixnum, Fixnum]
         case
-        when clean[name].is_a?(String) && clean[name].size > field[:max]
+        when field?(:chars) && clean[name].size > field[:max]
           fail! :big, "{{English name}} must be between {{min}} and {{max}} characters."
-        when clean[name].is_a?(String) && clean[name].size < field[:min]
+        when field?(:chars) && clean[name].size < field[:min]
           fail! :small, "{{English name}} must be between {{min}} and {{max}} characters."
 
-        when clean[name].is_a?(Numeric) && clean[name] > field[:max]
+        when field?(:numeric) && clean[name] > field[:max]
           fail! :big, "{{English name}} must be between {{min}} and {{max}}."
-        when clean[name].is_a?(Numeric) && clean[name] < field[:min]
+        when field?(:numeric) && clean[name] < field[:min]
           fail! :small, "{{English name}} must be between {{min}} and {{max}}."
         end
 
@@ -769,6 +769,8 @@ module Datoki
         self.class.fields[field_name][:english_name].upcase.gsub('_', ' ')
       when "max", "min", "exact_size"
         self.class.fields[field_name][name.downcase.to_sym]
+      when "val"
+        clean[field_name]
       else
         fail "Unknown value: #{name}"
       end

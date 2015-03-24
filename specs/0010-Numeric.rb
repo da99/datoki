@@ -78,4 +78,34 @@ describe Numeric do
     }.error[:msg].should.match /Num can only be: 1, 2, 3, 4/
   end
 
+  it "uses :big error msg" do
+    catch(:invalid) {
+      Class.new {
+        include Datoki
+        field(:squirrels) {
+          smallint 10, 10
+          big '{{val}} is too big.'
+        }
+        def create
+          clean :squirrels
+        end
+      }.create :squirrels=>50
+    }.error[:msg].should == "50 is too big."
+  end # === it uses :big error msg
+
+  it "uses :small error msg" do
+    catch(:invalid) {
+      Class.new {
+        include Datoki
+        field(:squirrels) {
+          smallint 10, 10
+          small '{{val}} is too small.'
+        }
+        def create
+          clean :squirrels
+        end
+      }.create :squirrels=>5
+    }.error[:msg].should == "5 is too small."
+  end # === it uses :small error msg
+
 end # === describe Numeric
