@@ -51,7 +51,6 @@ module Datoki
     attr_reader :ons, :fields, :fields_as_required
 
     def initialize_def_field
-      @on_doc             = []
       @ons                = {}
       @fields             = {} # Ex: {:name=>{}, :age=>{}}
       @fields_as_required = {} # Ex: {:name!=>:name}
@@ -273,13 +272,6 @@ module Datoki
       field[:schema_match] = true
     end
 
-    attr_reader :on_doc
-    def on *args
-      return(field_on *args) if !block_given?
-      @on_doc << [args, Proc.new]
-      self
-    end
-
     def field_on action, meth_name_sym
       fail "Invalid action: #{action.inspect}" unless Actions.include? action
       if field
@@ -472,61 +464,57 @@ module Datoki
     end
 
     if @raw
-      self.class.on_doc.each { |raw_arr|
 
-        conds = raw_arr.first
-        func  = raw_arr.last
-        instance_eval(&func) if conds.all? { |cond|
-          case cond
-          when Symbol
-            send(cond)
-          when Proc
-            cond.arity == 1 ? cond.call(@raw) : instance_eval(&cond)
-          when TrueClass, FalseClass
-            cond
-          else
-            fail ArgumentError, "Unknown: #{cond.inspect}"
-          end
-        }
+      schema = self.class.schema
 
-      } # === on_doc.each
+      case
+      when create? && respond_to?(:create)
+        create
+      when update? && respond_to?(:update)
+        update
+      when delete? && respond_to?(:delete)
+        delete
+      end
 
       if !@clean
         @raw.each { |k, v|
-          clean(k) if self.class.fields.has_key?(k)
-        }
-      end
-
-      schema = self.class.schema
-      if create?
-        # === Did the programmer forget to set the value?:
-        self.class.fields.each { |k, meta|
-          has_default = schema[k] && schema[k][:default]
-          if clean[k].nil? && !meta[:allow][:null] && !meta[:primary_key] && !has_default
-            fail ArgumentError, "#{k.inspect} is not set."
+          if self.class.fields.has_key?(k)
+            has_default = schema[k] && schema[k][:default]
+            clean(k) 
+            @clean.delete(k) if @clean[k].nil? && has_default
           end
-
-          # === Should we let the DB set the value?
-          @clean.delete(k) if @clean[k].nil? && has_default
         }
       end
 
       begin
         case
+
         when create?
-          insert_into_table unless !respond_to?(:insert_into_table)
+          @data = TABLE.returning.insert(insert_data).first
+
         when update?
-          alter_record unless !respond_to?(:alter_record)
+
+          DB[self.class.table].
+            where(primary_key[:name] => @clean.delete(primary_key[:name])).
+            update(@clean)
+
         when delete?
-          delete_from_table unless !respond_to?(:delete_from_table)
+          DB[self.class.table].
+            where(primary_key[:name] => @clean.delete(primary_key[:name])).
+            delete
+
         end unless @skips[:db]
+
       rescue Sequel::UniqueConstraintViolation => e
-        begin
-          new_record = TABLE.returning.insert(insert_data).first
-        rescue Sequel::UniqueConstraintViolation => e
-          raise e unless e.message['"screen_name_unique_idx"']
-          raise self.class::Invalid.new(self, "Screen name already taken: #{clean_data[:screen_name]}")
-        end
+
+          self.class.fields.each { |f|
+            if e.message["'\"#{f}_"]
+              field_name f
+              fail! "!English_name already taken: #{@clean[f]}")
+            end
+          }
+          raise e
+
       end
     end # === if @raw
 
@@ -717,20 +705,6 @@ module Datoki
 
   def new_data
     @new_data ||= {}
-  end
-
-  def on *args
-    fail ArgumentError, "No conditions." if args.empty?
-    yield if args.all? { |cond|
-      case cond
-      when Symbol
-        send(cond)
-      when TrueClass, FalseClass
-        cond
-      else
-        fail ArgumentError, "Unknown value: #{cond.inspect}"
-      end
-    }
   end
 
   def fail! msg
