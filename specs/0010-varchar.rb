@@ -42,8 +42,8 @@ describe :varchar do # ================================================
       Class.new {
         include Datoki
         field :title do
-          varchar
-          match /\A[a-zA-Z0-9]+\z/i, "Title must be only: alphanumeric"
+          varchar /\A[a-zA-Z0-9]+\z/i
+          mis_match "Title must be only: alphanumeric"
         end
         def create
           clean :title

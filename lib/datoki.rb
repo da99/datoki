@@ -375,6 +375,9 @@ module Datoki
       when [Fixnum, Fixnum]
         field[:min], field[:max] = args
 
+      when [Proc], [Regexp]
+        matches *args
+
       when [Fixnum, Fixnum, Proc], [Fixnum, Fixnum, Regexp]
         field[:min] = args.shift
         field[:max] = args.shift
@@ -530,7 +533,7 @@ module Datoki
           self.class.fields.each { |f|
             if e.message["'\"#{f}_"]
               field_name f
-              fail! "{{English name}} already taken: #{final[f]}"
+              fail! :unique, "{{English name}} already taken: #{final[f]}"
             end
           }
           raise e
@@ -602,14 +605,14 @@ module Datoki
     if field?(:numeric) && clean[name].is_a?(String)
       clean_val = Integer(clean[name]) rescue String
       if clean_val == String
-        fail! "{{English name}} must be numeric."
+        fail! :wrong_type, "{{English name}} must be numeric."
       else
         clean[name] = clean_val
       end
     end
 
     if field?(:text) && clean[name].is_a?(String) && clean[name].empty? && field[:min].to_i > 0
-      fail! "{{English name}} is required."
+      fail! :required, "{{English name}} is required."
     end
     # ================================
 
@@ -623,25 +626,30 @@ module Datoki
       when [NilClass, Fixnum]
         case
         when clean[name].is_a?(String) && clean[name].size > field[:max]
-          fail! "{{English name}} can't be longer than !max characters."
+          fail! :big, "{{English name}} can't be longer than {{max}} characters."
         when clean[name].is_a?(Numeric) && clean[name] > field[:max]
-          fail! "{{English name}} can't be higher than !max."
+          fail! :big, "{{English name}} can't be higher than {{max}}."
         end
 
       when [Fixnum, NilClass]
         case
         when clean[name].is_a?(String) && clean[name].size < field[:min]
-          fail! "{{English name}} can't be shorter than !min characters."
+          fail! :short, "{{English name}} can't be shorter than {{min}} characters."
         when clean[name].is_a?(Numeric) && clean[name] < field[:min]
-          fail! "{{English name}} can't be less than !min."
+          fail! :short, "{{English name}} can't be less than {{min}."
         end
 
       when [Fixnum, Fixnum]
         case
-        when clean[name].is_a?(String) && (clean[name].size < field[:min] || clean[name].size > field[:max])
-          fail! "{{English name}} must be between !min and !max characters."
-        when clean[name].is_a?(Numeric) && (clean[name] < field[:min] || clean[name] > field[:max])
-          fail! "{{English name}} must be between !min and !max."
+        when clean[name].is_a?(String) && clean[name].size > field[:max]
+          fail! :big, "{{English name}} must be between {{min}} and {{max}} characters."
+        when clean[name].is_a?(String) && clean[name].size < field[:min]
+          fail! :small, "{{English name}} must be between {{min}} and {{max}} characters."
+
+        when clean[name].is_a?(Numeric) && clean[name] > field[:max]
+          fail! :big, "{{English name}} must be between {{min}} and {{max}}."
+        when clean[name].is_a?(Numeric) && clean[name] < field[:min]
+          fail! :small, "{{English name}} must be between {{min}} and {{max}}."
         end
 
       else
@@ -667,7 +675,7 @@ module Datoki
     # === Is value in options? =======
     if field[:options]
       if !field[:options].include?(clean[name])
-        fail! "{{English name}} can only be: #{field[:options].map(&:inspect).join ', '}"
+        fail! :mis_match, "{{English name}} can only be: #{field[:options].map(&:inspect).join ', '}"
       end
     end
     # ================================
@@ -680,18 +688,18 @@ module Datoki
         when :type
           case
           when field?(:numeric) && !clean[name].is_a?(Integer)
-            fail! "{{English name}} needs to be an integer."
+            fail! :wrong_type, "{{English name}} needs to be an integer."
           when field?(:chars) && !clean[name].is_a?(String)
-            fail! "{{English name}} needs to be a String."
+            fail! :wrong_type, "{{English name}} needs to be a String."
           end
 
         when :exact_size
           if clean[name].size != field[:exact_size]
             case
             when field?(:chars) || clean[name].is_a?(String)
-              fail! "{{English name}} needs to be !exact_size in length."
+              fail! :mis_match, "{{English name}} needs to be {{exact_size}} in length."
             else
-              fail! "{{English name}} can only be !exact_size in size."
+              fail! :mis_match, "{{English name}} can only be {{exact_size}} in size."
             end
           end
 
@@ -719,12 +727,12 @@ module Datoki
             case regex
             when Regexp
               if clean[name] !~ regex
-                fail!(error_msg(:mis_match) || "{{English name}} is invalid.")
+                fail!(:mis_match, "{{English name}} is invalid.")
               end
 
             when Proc
               if !regex.call(self, clean[name])
-                fail!(error_msg(:mis_match) || "{{English name}} is invalid.")
+                fail!(:mis_match, "{{English name}} is invalid.")
               end
 
             else
@@ -739,16 +747,25 @@ module Datoki
   end # === def clean
 
   def error_msg type
-    field[:error_msgs][type]
+    field[:error_msgs] && field[:error_msgs][type]
   end
 
-  def fail! msg
-    err_msg = msg.gsub(/\{\{([a-z\_\-]+)\}\}/i) { |raw|
+  def fail! *args
+    case args.size
+    when 1
+      msg = args.shift
+    when 2
+      msg = error_msg(args.shift) || args.shift
+    else
+      fail ArgumentError, "Unknown args: #{args.inspect}"
+    end
+
+    err_msg = msg.gsub(/\{\{([a-z\_\-\ ]+)\}\}/i) { |raw|
       name = $1
       case name
-      when "English_name"
+      when "English name"
         self.class.fields[field_name][:english_name].capitalize.gsub('_', ' ')
-      when "ENGLISH_NAME"
+      when "ENGLISH NAME"
         self.class.fields[field_name][:english_name].upcase.gsub('_', ' ')
       when "max", "min", "exact_size"
         self.class.fields[field_name][name.downcase.to_sym]

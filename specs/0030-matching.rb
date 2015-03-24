@@ -60,7 +60,7 @@ describe :matching do
   end # === it inserts data into db if matcher returns true
 
   it "throws :invalid if mis-match w/Regexp matcher" do
-    should.throw(:invalid) {
+    catch(:invalid) {
       Class.new {
         include Datoki
         table :datoki_test
@@ -70,12 +70,12 @@ describe :matching do
         def create
           clean :title, :body, :age
         end
-      }.create(:title=>'bad', :body=>'body', :age=>50)
+      }.create(:title=>'baddd', :body=>'body', :age=>50)
     }.error[:msg].should.match /Title is really bad/
   end # === it accepts a Regexp as a matcher
 
   it "throws :invalid if lambda matcher returns false" do
-    should.throw(:invalid) {
+    r = catch(:invalid) {
       Class.new {
         include Datoki
         table :datoki_test
@@ -86,7 +86,8 @@ describe :matching do
           clean :title, :body, :age
         end
       }.create(:title=>'title', :body=>'body', :age=>50)
-    }.error[:msg].should.match /:title is invalid/
+    }
+    r.error[:msg].should.match /Title is invalid/
   end # === it throws :invalid if matcher returns false
 
 end # === describe :matching
