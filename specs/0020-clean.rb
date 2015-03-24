@@ -13,7 +13,7 @@ describe :clean do
       end
     }
 
-    c.new(:state=>:happy, :nick_name=>'Bob').
+    c.create(:state=>:happy, :nick_name=>'Bob').
       clean[:nick_name].should == 'Bob'
   end # === it adds field to @clean
 
@@ -32,7 +32,7 @@ describe :clean do
         true
       end
     }
-    c.new(:nick_name=>'Wiley').
+    c.create(:nick_name=>'Wiley').
       clean.should == {:nick_name=>'Wiley'}
   end # === it skips cleaning if field is not defined
 
