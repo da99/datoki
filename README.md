@@ -39,3 +39,7 @@ A Ruby gem for managing validation and records using PostgreSQL.
   end # === class
 ```
 
+## NOTE:
+
+1) Raises an error if a mismatch between field definition and schema.
+Example: `:allow_null != field[:allow][:null]`
