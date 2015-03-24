@@ -11,7 +11,7 @@ module Datoki
   Schema_Conflict = Class.new RuntimeError
 
   Actions       = [:all, :create, :read, :update, :update_or_create, :trash, :delete]
-  Char_Types    = [:varchar, :text]
+  Char_Types    = [:varchar, :text, :string_ish]
   Numeric_Types = [:smallint, :integer, :bigint, :decimal, :numeric]
   Types         = Char_Types + Numeric_Types + [:datetime]
 
@@ -247,10 +247,12 @@ module Datoki
       end
 
       # === match :type
-      db_type = Datoki.db_type_to_ruby db_schema[:db_type], db_schema[:type]
-      type    = field[:type]
-      if db_type != type
-        fail Schema_Conflict, "#{name}: :type: #{db_type.inspect} != #{type.inspect}"
+      if field[:type] != :string_ish
+        db_type = Datoki.db_type_to_ruby db_schema[:db_type], db_schema[:type]
+        type    = field[:type]
+        if db_type != type
+          fail Schema_Conflict, "#{name}: :type: #{db_type.inspect} != #{type.inspect}"
+        end
       end
 
       # === match :max_length
@@ -368,12 +370,24 @@ module Datoki
       when [Fixnum, Fixnum]
         field[:min], field[:max] = args
 
+      when [Fixnum, Fixnum, Regexp]
+        field[:min], field[:max], field[:matches] = args
+
       else
         fail "Unknown args: #{args.inspect}"
 
       end # === case
 
     end # === def
+
+    [:mis_match, :required, :too_small, :too_big].each { |name|
+      eval <<-EOF
+        def #{name} msg
+          field[:error_msgs] ||= {}
+          field[:error_msgs][:#{name}] = msg
+        end
+      EOF
+    }
 
     def enable *props
       props.each { |prop|
