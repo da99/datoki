@@ -67,6 +67,7 @@ module Datoki
     end
 
     def table name
+      fail ArgumentError, "Table name must be a Symbol: #{name.inspect}" unless name.is_a?(Symbol)
       if !@schema.empty? || @table_name
         fail "Schema/table already defined: #{@table_name.inspect}"
       end
@@ -74,10 +75,11 @@ module Datoki
       db_schema = Datoki.db.schema(name)
 
       if !db_schema
-        fail "Schema not found for: #{name.inspect}"
+        fail ArgumentError, "Schema not found for: #{name.inspect}"
       end
 
       @table_name = name
+      self.const_set(:TABLE, DB[@table_name])
 
       db_schema.each { |pair|
         @schema[pair.first] = pair.last
@@ -138,6 +140,9 @@ module Datoki
     end
 
     def field *args
+      # === Setup a default table if none specified:
+      table(self.to_s.downcase.to_sym) unless @table_name
+
       return fields[@current_field] if args.empty?
       return fields[args.first] unless block_given?
 
@@ -443,13 +448,14 @@ module Datoki
 
   # ================= Instance Methods ===============
 
-  attr_reader :error
+  attr_reader :error, :data
   def initialize unknown = nil
     @data       = nil
     @field_name = nil
     @clean      = nil
     @error      = nil
     @skips      = {}
+    @db_ops     = {} # Ex: :db_insert=>true, :db_update=>true
 
     if unknown
       if unknown.keys.all? { |f| self.class.fields.has_key?(f) }
@@ -473,41 +479,36 @@ module Datoki
         delete
       end
 
-      if !@clean
-        @raw.each { |k, v|
-          next unless self.class.fields.has_key?(k)
-          has_default = schema[k] && schema[k][:default]
-          clean(k) 
-          @clean.delete(k) if @clean[k].nil? && has_default
+      if @clean
+        @clean.each { |k, v|
+          # === Delete nil value if schema has a default value:
+          @clean.delete(k) if @clean[k].nil? && schema[k] && schema[k][:default]
         }
       end
 
-      self.class.fields.each { |k, v|
-        if (!@clean || @clean[k].nil?) && !v[:allow][:null] && !v[:primary_key]
-          fail ArgumentError, "#{k.inspect} is not set."
-        end
-      }
+      if !@skips[:db] && !self.class.schema.empty?
+        fail "No clean values found." if (!@clean || @clean.empty?)
 
-      begin
-        case
+        begin
+          case
 
-        when create?
-          @data = TABLE.returning.insert(insert_data).first
+          when create?
+            db_insert
 
-        when update?
+          when update?
 
-          DB[self.class.table].
-            where(primary_key[:name] => @clean.delete(primary_key[:name])).
-            update(@clean)
+            DB[self.class.table].
+              where(primary_key[:name] => @clean.delete(primary_key[:name])).
+              update(@clean)
 
-        when delete?
-          DB[self.class.table].
-            where(primary_key[:name] => @clean.delete(primary_key[:name])).
-            delete
+          when delete?
+            DB[self.class.table].
+              where(primary_key[:name] => @clean.delete(primary_key[:name])).
+              delete
 
-        end if !@skips[:db] && !self.class.schema.empty?
+          end
 
-      rescue Sequel::UniqueConstraintViolation => e
+        rescue Sequel::UniqueConstraintViolation => e
 
           self.class.fields.each { |f|
             if e.message["'\"#{f}_"]
@@ -517,10 +518,9 @@ module Datoki
           }
           raise e
 
-      end
+        end # === begin/rescue
+      end # === if !@skips[:db]
     end # === if @raw
-
-    self.class.schema_match(:all)
   end
 
   def skip name
@@ -781,6 +781,17 @@ module Datoki
 
   def delete?
     !!(@raw.has_key?(:delete) && !@raw[:delete])
+  end
+
+  def TABLE
+    self.class::TABLE
+  end
+
+  def db_insert
+    k = :db_insert
+    fail "Already inserted." if @db_ops[k]
+    @data = (@data || {}).merge(TABLE().returning.insert(@clean).first)
+    @db_ops[k] = true
   end
 
 end # === module Datoki ===

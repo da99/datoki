@@ -14,26 +14,27 @@ describe "Datoki.db" do
 
     @klass = Class.new {
       include Datoki
-      table "datoki_test"
+      table :datoki_test
       field(:id) { integer; primary_key }
       field(:title) { varchar 1, 123 }
       field(:body) { text nil, 1, 123 }
 
       def create
-        skip :db
+        clean :title, :body
       end
     }
   }
 
   it "allows an undefined field that exists in the db schema" do
-    should.not.raise {
-      Class.new {
-        include Datoki
-        table :datoki_test
-        field(:id) { primary_key }
-        field(:body) { text nil, 1, 222 }
-      }.new
-    }
+    Class.new {
+      include Datoki
+      table :datoki_test
+      field(:id) { primary_key }
+      field(:title) { varchar 1, 123 }
+      def create
+        clean :title
+      end
+    }.create(:title=>'title').data.should == {:id=>1, :title=>'title', :body=>'hello'}
   end
 
   it 'raises Schema_Conflict if a field is found that allows null, but not specifed to do so' do
@@ -49,9 +50,9 @@ describe "Datoki.db" do
   end
 
   it "requires field if value = null and :allow_null = false" do
-    should.raise(ArgumentError) {
+    should.raise(Sequel::NotNullConstraintViolation) {
       @klass.create :title=>nil, :body=>"hiya"
-    }.message.should.match /:title is not set/
+    }.message.should.match /null value in column "title" violates not-null constraint/
   end
 
   it "requires a value if: :text field, value = (empty string), min = 1, allow null" do

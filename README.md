@@ -1,7 +1,8 @@
 
 # Datoki
 
-A Ruby gem for managing validation and records using PostgreSQL.
+A Ruby gem that is part abstraction layer, part validator...
+for managing data in PostgreSQL.
 
 ## Installation
 
