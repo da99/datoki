@@ -450,6 +450,7 @@ module Datoki
 
   # ================= Instance Methods ===============
 
+  attr_reader :error
   def initialize data = nil
     if self.class.on_doc && data
       @raw = data
@@ -477,30 +478,15 @@ module Datoki
       @data       = nil
       @new_data   = nil
       @field_name = nil
-      @clean_data = nil
-      @errors     = nil
+      @clean      = nil
+      @error     = nil
 
       self.class.schema_match(:all)
     end
   end
 
-  def errors
-    @errors ||= {}
-  end
-
-  def errors?
-    @errors && !@errors.empty?
-  end
-
-  def save_error msg
-    @errors ||= {}
-    @errors[field_name] ||= {}
-    @errors[field_name][:msg] = msg
-    @errors[field_name][:value] = val
-  end
-
-  def clean_data
-    @clean_data ||= {}
+  def error?
+    @error && !@error.empty?
   end
 
   def clean *args
@@ -717,7 +703,7 @@ module Datoki
       end
     }
 
-    save_error err_msg
+    @error = {:msg=>err_msg, :value=>clean_name[field_name]}
     throw :invalid
   end
 
@@ -731,18 +717,6 @@ module Datoki
     else
       fail "Unknown args: #{args.inspect}"
     end
-  end
-
-  def val
-    if clean_data.has_key?(field_name)
-      clean_data[field_name]
-    else
-      new_data[field_name]
-    end
-  end
-
-  def val! new_val
-    clean_data[field_name] = new_val
   end
 
   def field *args
