@@ -452,7 +452,6 @@ module Datoki
     }
 
     def matches v = :blok
-      fail "Not allowed for #{field[:type].inspect}" unless field?(:chars)
       field[:cleaners][:match] ||= []
       field[:cleaners][:match] << (v == :blok ? Proc.new : v)
     end
