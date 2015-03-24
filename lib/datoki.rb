@@ -423,9 +423,9 @@ module Datoki
       }
     end
 
-    def set_to *args
+    def set_to v = :blok
       field[:cleaners][:set_to] ||= []
-      field[:cleaners][:set_to].concat args
+      field[:cleaners][:set_to] << (v == :blok ? Proc.new : v)
     end
 
     def equal_to *args
@@ -451,10 +451,10 @@ module Datoki
       EOF
     }
 
-    def matches v
+    def matches v = :blok
       fail "Not allowed for #{field[:type].inspect}" unless field?(:chars)
       field[:cleaners][:match] ||= []
-      field[:cleaners][:match] << v
+      field[:cleaners][:match] << (v == :blok ? Proc.new : v)
     end
 
     def create raw
@@ -705,7 +705,7 @@ module Datoki
 
         when :set_to
           args.each { |meth|
-            clean[name] = send(meth)
+            clean[name] = (meth.is_a?(Symbol) ? send(meth) : meth.call(self, clean[name]))
           }
 
         when :equal_to
