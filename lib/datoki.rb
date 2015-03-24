@@ -500,7 +500,7 @@ module Datoki
 
       if create?
         self.class.fields.each { |k, meta|
-          if !clean.has_key?(k) && !meta[:allow][:null]
+          if !clean.has_key?(k) && !meta[:allow][:null] && !meta[:primary_key]
             fail ArgumentError, "#{k.inspect} is not set."
           end
         }

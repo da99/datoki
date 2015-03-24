@@ -24,7 +24,7 @@ describe :on do
       end
     }
 
-    c.new(:state => :happy).
+    c.create(:state => :happy).
       result.should == :happy
   end # === it executes proc if condition is true
 
@@ -58,7 +58,7 @@ describe :on do
         true
       end
     }
-    c.new({}).result.should == [:found]
+    c.create({}).result.should == [:found]
   end # === it executes nested :on if condition matches
 
 end # === describe :on
