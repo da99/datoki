@@ -11,6 +11,14 @@ for managing data in PostgreSQL.
 ## Usage
 
 ```ruby
+  # === Set it up: =======================
+  require 'datoki'
+  require 'sequel'
+  DB = Sequel.connect ENV['DATABASE_URL']
+  DB.cache_schema = false
+  Datoki.db DB
+  # ======================================
+
   class Computer
     include Datoki
 

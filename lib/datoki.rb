@@ -48,7 +48,7 @@ module Datoki
 
   module Def_Field
 
-    attr_reader :ons, :fields, :fields_as_required
+    attr_reader :ons, :fields, :table_name, :fields_as_required
 
     def initialize_def_field
       @ons                = {}
@@ -145,7 +145,7 @@ module Datoki
       # === Setup a default table if none specified:
       if !@table_name
         t_name = self.to_s.downcase.to_sym
-        table(name) if Datoki.db.tables.include?(t_name)
+        table(t_name) if Datoki.db.tables.include?(t_name)
       end
 
       return fields[@current_field] if args.empty?

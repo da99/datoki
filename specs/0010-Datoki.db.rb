@@ -1,4 +1,6 @@
 
+class Datoki_Test
+end
 
 describe "Datoki.db" do
 
@@ -24,6 +26,15 @@ describe "Datoki.db" do
       end
     }
   }
+
+  it "sets :table_name to name of class" do
+    class Datoki_Test
+      include Datoki
+      field(:title) { varchar 1,123  }
+    end
+
+    Datoki_Test.table_name.should == :datoki_test
+  end # === it sets :table_name to name of class
 
   it "allows an undefined field that exists in the db schema" do
     Class.new {
