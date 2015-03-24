@@ -25,6 +25,17 @@ describe "Datoki.db" do
     }
   }
 
+  it "allows an undefined field that exists in the db schema" do
+    should.not.raise {
+      Class.new {
+        include Datoki
+        table :datoki_test
+        field(:id) { primary_key }
+        field(:body) { text nil, 1, 222 }
+      }.new
+    }
+  end
+
   it 'raises Schema_Conflict if a field is found that allows null, but not specifed to do so' do
     should.raise(Datoki::Schema_Conflict) {
       Class.new {
@@ -34,7 +45,7 @@ describe "Datoki.db" do
         field(:title) { varchar 1, 123 }
         field(:body) { text 1, 123 }
       }
-    }.message.should.match /:allow_null: true != false/
+    }.message.should.match /body: :allow_null: true != false/
   end
 
   it "requires field if value = null and :allow_null = false" do

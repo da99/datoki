@@ -213,11 +213,8 @@ module Datoki
       name      = @current_field
       db_schema = schema[@current_field]
 
-      if db_schema && !field && db_schema[:type] != :datetime
-        fail Schema_Conflict, "#{name}: #{name.inspect} has not been defined."
-      end
-
-      return true if field[:schema_match]
+      return true if db_schema && !field
+      return true if field[:schema_has_been_matched]
 
       if db_schema[:allow_null] != field[:allow][:null]
         fail Schema_Conflict, "#{name}: :allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
@@ -269,7 +266,7 @@ module Datoki
         fail Schema_Conflict, "#{name}: :allow_null: #{db_schema[:allow_null].inspect} != #{field[:allow][:null].inspect}"
       end
 
-      field[:schema_match] = true
+      field[:schema_has_been_matched] = true
     end
 
     def field_on action, meth_name_sym
@@ -763,6 +760,10 @@ module Datoki
     arr = self.class.fields.detect { |k, v| v[:primary_key] }
     fail "Primary key not found." unless arr
     arr.last
+  end
+
+  def new?
+    !@data
   end
 
   def create?
