@@ -4,10 +4,17 @@
 #
 set -u -e -o pipefail
 
+files=""
 if [[ ! -z "$@" ]]; then
   files="$(echo -n specs/*-$1.rb)"
-  shift
-else
+  if [[ -f "$files" ]]; then
+    shift
+  else
+    files=""
+  fi
+fi
+
+if [[ -z "$files" ]]; then
   files="$(echo -n specs/*.rb | tr ' ' '\n' | sort)"
 fi
 
