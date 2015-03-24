@@ -558,7 +558,7 @@ module Datoki
     clean[name] = @raw[name] unless clean.has_key?(name)
 
     # === Should we let the DB set the value?
-    if self.class.schema[name][:default] && (!clean.has_key?(name) || !clean[name])
+    if self.class.schema[name] && self.class.schema[name][:default] && (!clean.has_key?(name) || !clean[name])
       clean.delete name
       return self.class.schema[name][:default]
     end
@@ -625,7 +625,9 @@ module Datoki
 
     # === to_i if necessary ==========
     if field?(:numeric)
-      clean[name] = clean[name].to_i
+      if clean[name].nil? && !field[:allow][:null]
+        clean[name] = clean[name].to_i
+      end
     end
     # ================================
 

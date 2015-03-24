@@ -28,11 +28,7 @@ describe :href do
   end
 
   it "sets :min to 0" do
-    @klass.fields[:homepage][:min].should == 0
-  end
-
-  it "sets allow :null to false" do
-    @klass.fields[:homepage][:allow][:null].should == false
+    @klass.fields[:homepage][:min].should == 1
   end
 
   it "sets :html_escape to :href" do
