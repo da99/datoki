@@ -48,30 +48,22 @@ module Datoki
 
   module Def_Field
 
-    attr_reader :ons, :fields
+    attr_reader :ons, :fields, :fields_as_required
 
     def initialize_def_field
-      @record_errors = false
-      @ons           = {}
-      @fields        = {}
-      @current_field = nil
-      @schema        = {}
-      @schema_match  = false
-      @table_name    = nil
+      @ons                = {}
+      @fields             = {} # Ex: {:name=>{}, :age=>{}}
+      @fields_as_required = {} # Ex: {:name!=>:name}
+      @current_field      = nil
+      @schema             = {}
+      @schema_match       = false
+      @table_name         = nil
       name = self.to_s.downcase.to_sym
       table(name) if Datoki.db.tables.include?(name)
     end
 
     def schema_match?
       @schema_match
-    end
-
-    def record_errors?
-      @record_errors
-    end
-
-    def record_errors
-      @record_errors = true
     end
 
     def table name
@@ -148,6 +140,7 @@ module Datoki
       name = args.first
 
       fail "#{name.inspect} already defined." if fields[name]
+      fields_as_required << :"#{name}!"
 
       fields[name] = {
         :name         => name,
@@ -453,7 +446,7 @@ module Datoki
       r.create h
     end
 
-  end # === Def_Field
+  end # === Def_Field =====================================================
 
   # ================= Instance Methods ===============
 
@@ -510,41 +503,186 @@ module Datoki
     @clean_data ||= {}
   end
 
-  def clean! name, *args
-    if (!clean.has_key?(name) || !clean[name] ) && (!@raw.has_key?(name) || !@raw[name])
-      fail ArgumentError, "#{name.inspect} is not set."
-    end
-    clean name, *args
-  end
-
   def clean *args
-    case
-    when args.empty?
+    if args.empty?
       @clean ||= begin
                    h = {}
                    h.default_proc = Key_Not_Found
                    h
                  end
-    else
-      name = args.shift
-      return self if !clean.has_key?(name) && !@raw.has_key?(name)
-      clean[name] = @raw[name] if !clean.has_key?(name)
-      while cond = args.shift
-        case cond
-        when :string
-          if !clean[name].is_a?(String)
-            fail ArgumentError, "#{name.inspect} must be a String: #{clean[name].inspect}"
-          end
-        when :integer, :Fixnum
-          if !clean[name].is_a?(Fixnum)
-            fail ArgumentError, "#{name.inspect} must be a Fixnum: #{clean[name].inspect}"
-          end
-        else
-          send(cond)
-        end
+      return @clean
+    end
+
+    if args.size > 1
+      return args.each { |f| clean f }
+    end
+
+    name     = args.first
+    required = false
+
+    if self.class.fields_as_required[name]
+      name = self.class.fields_as_required[name]
+      required = true
+    end
+
+    if (!field[:allow][:null] && (!@raw.has_key?(name) || @raw[name] == nil))
+      required = true
+    end
+
+    if required && (!@raw.has_key?(name) || @raw[name].nil?)
+      fail ArgumentError, "#{name.inspect} is not set."
+    end
+
+    field_name name
+    f_meta = self.class.fields[name]
+
+    clean[name] = @raw[name] unless clean.has_key?(name)
+    if field.has_key?(:default) && !clean.has_key?(name) || !clean[name]
+      clean[name] = field[:default]
+    end
+
+    if clean[name].is_a?(String) && field[:allow][:strip]
+      clean[name].strip!
+    end
+
+    if field?(:chars) && !field.has_key?(:min) && clean[name].is_a?(String) && field[:allow][:null]
+      clean[name] = ni
+    end
+
+    if field?(:numeric) && clean[name].is_a?(String)
+      clean_val = Integer(clean[name]) rescue String
+      if clean_val == String
+        fail! "!English_name must be numeric."
+      else
+        clean[name] = clean_val
       end
     end
-  end
+
+    if field?(:text) && clean[name].is_a?(String) && clean[name].empty? && field[:min].to_i > 0
+      fail! "!English_name is required."
+    end
+    # ================================
+
+    # === check min, max ======
+    if clean[name].is_a?(String) || clean[name].is_a?(Numeric)
+      case [field[:min], field[:max]].map(&:class)
+
+      when [NilClass, NilClass]
+        # do nothing
+
+      when [NilClass, Fixnum]
+        case
+        when clean[name].is_a?(String) && clean[name].size > field[:max]
+          fail! "!English_name can't be longer than !max characters."
+        when clean[name].is_a?(Numeric) && clean[name] > field[:max]
+          fail! "!English_name can't be higher than !max."
+        end
+
+      when [Fixnum, NilClass]
+        case
+        when clean[name].is_a?(String) && clean[name].size < field[:min]
+          fail! "!English_name can't be shorter than !min characters."
+        when clean[name].is_a?(Numeric) && clean[name] < field[:min]
+          fail! "!English_name can't be less than !min."
+        end
+
+      when [Fixnum, Fixnum]
+        case
+        when clean[name].is_a?(String) && (clean[name].size < field[:min] || clean[name].size > field[:max])
+          fail! "!English_name must be between !min and !max characters."
+        when clean[name].is_a?(Numeric) && (clean[name] < field[:min] || clean[name] > field[:max])
+          fail! "!English_name must be between !min and !max."
+        end
+
+      else
+        fail "Unknown values for :min, :max: #{field[:min].inspect}, #{field[:max].inspect}"
+      end
+    end # === if
+    # ================================
+
+    # === to_i if necessary ==========
+    if field?(:numeric)
+      clean[name] = clean[name].to_i
+    end
+    # ================================
+
+    # === :strip if necessary ========
+    if field?(:chars) && field[:allow][:strip] && clean[name].is_a?(String)
+      clean[name] = clean[name].strip
+    end
+    # ================================
+
+    # === Is value in options? =======
+    if field[:options]
+      if !field[:options].include?(clean[name])
+        fail! "!English_name can only be: #{field[:options].map(&:inspect).join ', '}"
+      end
+    end
+    # ================================
+
+    field[:cleaners].each { |cleaner, args|
+      next if args === false # === cleaner has been disabled.
+
+        case cleaner
+
+        when :type
+          case
+          when field?(:numeric) && !clean[name].is_a?(Integer)
+            fail! "!English_name needs to be an integer."
+          when field?(:chars) && !clean[name].is_a?(String)
+            fail! "!English_name needs to be a String."
+          end
+
+        when :exact_size
+          if clean[name].size != field[:exact_size]
+            case
+            when field?(:chars) || clean[name].is_a?(String)
+              fail! "!English_name needs to be !exact_size in length."
+            else
+              fail! "!English_name can only be !exact_size in size."
+            end
+          end
+
+        when :set_to
+          args.each { |meth|
+            clean[name] = send(meth)
+          }
+
+        when :equal_to
+          args.each { |pair|
+            meth, msg, other = pair
+            target = send(meth)
+            fail!(msg || "!English_name must be equal to: #{target.inspect}") unless clean[name] == target
+          }
+
+        when :included_in
+          arr, msg, other = args
+          fail!(msg || "!English_name must be one of these: #{arr.join ', '}") unless arr.include?(clean[name])
+
+        when :upcase
+          clean[name] = clean[name].upcase
+
+        when :match
+          args.each { |pair|
+            regex, msg, other = pair
+            if clean[name] !~ regex
+              fail!(msg || "!English_name must match #{regex.inspect}")
+            end
+          }
+
+        when :not_match
+          args.each { |pair|
+            regex, msg, other = pair
+            if clean[name] =~ regex
+              fail!(msg || "!English_name must not match #{regex.inspect}")
+            end
+          }
+
+        else
+          fail "Cleaner not implemented: #{cleaner.inspect}"
+        end # === case cleaner
+    } # === field[:cleaners].each
+  end # === def clean
 
   def new_data
     @new_data ||= {}
@@ -579,12 +717,8 @@ module Datoki
       end
     }
 
-    if self.class.record_errors?
-      save_error err_msg
-      throw :error_saved
-    else
-      fail Invalid, err_msg
-    end
+    save_error err_msg
+    throw :invalid
   end
 
   def field_name *args
@@ -626,196 +760,6 @@ module Datoki
     self.class.inspect_field? :type, field_name, *args
   end
 
-  def run action
-    self.class.fields.each { |f_name, f_meta|
-
-      field_name f_name
-      is_set    = new_data.has_key?(field_name)
-      is_update = action == :update
-      is_nil    = is_set && new_data[field_name].nil?
-
-      # === Should the field be skipped? ===============
-      next if !is_set && is_update
-      next if !is_set && field[:primary_key]
-      next if field[:allow][:null] && (!is_set || is_nil)
-
-      if is_set 
-        val! new_data[field_name]
-      elsif field.has_key?(:default)
-        val! field[:default]
-      end
-
-      if val.is_a?(String) && field[:allow][:strip]
-        val! val.strip
-      end
-
-      if field?(:chars) && !field.has_key?(:min) && val.is_a?(String) && field[:allow][:null]
-        val! nil
-      end
-
-      catch :error_saved do
-
-        if field?(:numeric) && val.is_a?(String)
-          clean_val = Integer(val) rescue String
-          if clean_val == String
-            fail! "!English_name must be numeric."
-          else
-            val! clean_val
-          end
-        end
-
-        # === check required. ============
-        if val.nil? && !field[:allow][:null]
-          fail! "!English_name is required."
-        end
-
-        if field?(:text) && val.is_a?(String) && val.empty? && field[:min].to_i > 0
-          fail! "!English_name is required."
-        end
-        # ================================
-
-        # === check min, max ======
-        if val.is_a?(String) || val.is_a?(Numeric)
-          case [field[:min], field[:max]].map(&:class)
-
-          when [NilClass, NilClass]
-            # do nothing
-
-          when [NilClass, Fixnum]
-            case
-            when val.is_a?(String) && val.size > field[:max]
-              fail! "!English_name can't be longer than !max characters."
-            when val.is_a?(Numeric) && val > field[:max]
-              fail! "!English_name can't be higher than !max."
-            end
-
-          when [Fixnum, NilClass]
-            case
-            when val.is_a?(String) && val.size < field[:min]
-              fail! "!English_name can't be shorter than !min characters."
-            when val.is_a?(Numeric) && val < field[:min]
-              fail! "!English_name can't be less than !min."
-            end
-
-          when [Fixnum, Fixnum]
-            case
-            when val.is_a?(String) && (val.size < field[:min] || val.size > field[:max])
-              fail! "!English_name must be between !min and !max characters."
-            when val.is_a?(Numeric) && (val < field[:min] || val > field[:max])
-              fail! "!English_name must be between !min and !max."
-            end
-
-          else
-            fail "Unknown values for :min, :max: #{field[:min].inspect}, #{field[:max].inspect}"
-          end
-        end # === if
-        # ================================
-
-        # === to_i if necessary ==========
-        if field?(:numeric)
-          val! val.to_i
-        end
-        # ================================
-
-        # === :strip if necessary ========
-        if field?(:chars) && field[:allow][:strip] && val.is_a?(String)
-          val! val.strip
-        end
-        # ================================
-
-        # === Is value in options? =======
-        if field[:options]
-          if !field[:options].include?(val)
-            fail! "!English_name can only be: #{field[:options].map(&:inspect).join ', '}"
-          end
-        end
-        # ================================
-
-        field[:cleaners].each { |cleaner, args|
-          next if args === false # === cleaner has been disabled.
-
-            case cleaner
-
-            when :type
-              case
-              when field?(:numeric) && !val.is_a?(Integer)
-                fail! "!English_name needs to be an integer."
-              when field?(:chars) && !val.is_a?(String)
-                fail! "!English_name needs to be a String."
-              end
-
-            when :exact_size
-              if val.size != field[:exact_size]
-                case
-                when field?(:chars) || val.is_a?(String)
-                  fail! "!English_name needs to be !exact_size in length."
-                else
-                  fail! "!English_name can only be !exact_size in size."
-                end
-              end
-
-            when :set_to
-              args.each { |meth|
-                val! send(meth)
-              }
-
-            when :equal_to
-              args.each { |pair|
-                meth, msg, other = pair
-                target = send(meth)
-                fail!(msg || "!English_name must be equal to: #{target.inspect}") unless val == target
-              }
-
-            when :included_in
-              arr, msg, other = args
-              fail!(msg || "!English_name must be one of these: #{arr.join ', '}") unless arr.include?(val)
-
-            when :upcase
-              val! val.upcase
-
-            when :match
-              args.each { |pair|
-                regex, msg, other = pair
-                if val !~ regex
-                  fail!(msg || "!English_name must match #{regex.inspect}")
-                end
-              }
-
-            when :not_match
-              args.each { |pair|
-                regex, msg, other = pair
-                if val =~ regex
-                  fail!(msg || "!English_name must not match #{regex.inspect}")
-                end
-              }
-
-            else
-              fail "Cleaner not implemented: #{cleaner.inspect}"
-            end # === case cleaner
-
-
-        } # === field[:cleaners].each
-
-        field[:on][action].each { |meth, is_enabled|
-          next unless is_enabled
-          send meth
-        } if field[:on][action]
-
-      end # === catch :error_saved
-    } # === field
-
-    return if errors?
-
-    self.class.ons.each { |action, meths|
-      meths.each { |meth, is_enabled|
-        next unless is_enabled
-        catch :error_saved do
-          send meth
-        end
-      }
-    }
-  end
-
   def create new_data
     @new_data = new_data
     run :create
@@ -826,6 +770,28 @@ module Datoki
     @new_data = new_data
     run :update
     self
+  end
+
+  def primary_key
+    arr = self.class.fields.detect { |k, v| v[:primary_key] }
+    fail "Primary key not found." unless arr
+    arr.last
+  end
+
+  def create?
+    !@raw[primary_key[:name]]
+  end
+
+  def read?
+    !!@raw[:read]
+  end
+
+  def update?
+    !!@raw[:update]
+  end
+
+  def delete?
+    !!@rarw[:delete]
   end
 
 end # === module Datoki ===

@@ -5,12 +5,11 @@ describe :clean do
     c = Class.new {
       include Datoki
 
-      on :happy? do
-        clean :nick_name, :string
-      end
+      field(:nick_name) { varchar 1,50 }
+      on(:happy?) { clean :nick_name }
 
       def happy?
-        @raw[:state] == :happy
+        true
       end
     }
 
@@ -22,9 +21,11 @@ describe :clean do
     c = Class.new {
       include Datoki
 
+      field(:nick_name) { varchar 3, 255 }
+      field(:age) { smallint }
+
       on :happy? do
-        clean :nick_name, :string
-        clean :age, :integer
+        clean :nick_name, :age
       end
 
       def happy?
