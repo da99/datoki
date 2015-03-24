@@ -541,34 +541,35 @@ module Datoki
       required = true
     end
 
-    field_name name
-    f_meta = self.class.fields[name]
+    field_name(name)
+    f_meta   = self.class.fields[name]
+    required = true if (!field[:allow][:null] && (!@raw.has_key?(name) || @raw[name] == nil))
 
-    if (!field[:allow][:null] && (!@raw.has_key?(name) || @raw[name] == nil))
-      required = true
-    end
-
+    # === Did the programmer forget to set the value?:
     if required && (!@raw.has_key?(name) || @raw[name].nil?)
       fail ArgumentError, "#{name.inspect} is not set."
     end
 
+    # === Skip this if nothing is set and is null-able:
     if !required && field[:allow][:null] && !@raw.has_key?(name) && !clean.has_key?(name)
       return nil
     end
 
     clean[name] = @raw[name] unless clean.has_key?(name)
 
+    # === Should we let the DB set the value?
     if self.class.schema[name][:default] && (!clean.has_key?(name) || !clean[name])
       clean.delete name
       return self.class.schema[name][:default]
     end
 
+    # === Strip the value:
     if clean[name].is_a?(String) && field[:allow][:strip]
       clean[name].strip!
     end
 
     if field?(:chars) && !field.has_key?(:min) && clean[name].is_a?(String) && field[:allow][:null]
-      clean[name] = ni
+      clean[name] = nil
     end
 
     if field?(:numeric) && clean[name].is_a?(String)
