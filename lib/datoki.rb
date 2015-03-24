@@ -375,8 +375,10 @@ module Datoki
       when [Fixnum, Fixnum]
         field[:min], field[:max] = args
 
-      when [Fixnum, Fixnum, Regexp]
-        field[:min], field[:max], field[:matches] = args
+      when [Fixnum, Fixnum, Proc], [Fixnum, Fixnum, Regexp]
+        field[:min] = args.shift
+        field[:max] = args.shift
+        matches *args
 
       else
         fail "Unknown args: #{args.inspect}"
@@ -446,17 +448,10 @@ module Datoki
       EOF
     }
 
-    def match *args
+    def matches v
       fail "Not allowed for #{field[:type].inspect}" unless field?(:chars)
       field[:cleaners][:match] ||= []
-      field[:cleaners][:match] << args
-    end
-
-    def not_match *args
-      fail "Not allowed for #{field[:type].inspect}" unless field?(:chars)
-      field[:cleaners][:not_match] ||= []
-      field[:cleaners][:not_match] << args
-      self
+      field[:cleaners][:match] << v
     end
 
     def create raw
@@ -535,7 +530,7 @@ module Datoki
           self.class.fields.each { |f|
             if e.message["'\"#{f}_"]
               field_name f
-              fail! "!English_name already taken: #{final[f]}"
+              fail! "{{English name}} already taken: #{final[f]}"
             end
           }
           raise e
@@ -607,14 +602,14 @@ module Datoki
     if field?(:numeric) && clean[name].is_a?(String)
       clean_val = Integer(clean[name]) rescue String
       if clean_val == String
-        fail! "!English_name must be numeric."
+        fail! "{{English name}} must be numeric."
       else
         clean[name] = clean_val
       end
     end
 
     if field?(:text) && clean[name].is_a?(String) && clean[name].empty? && field[:min].to_i > 0
-      fail! "!English_name is required."
+      fail! "{{English name}} is required."
     end
     # ================================
 
@@ -628,25 +623,25 @@ module Datoki
       when [NilClass, Fixnum]
         case
         when clean[name].is_a?(String) && clean[name].size > field[:max]
-          fail! "!English_name can't be longer than !max characters."
+          fail! "{{English name}} can't be longer than !max characters."
         when clean[name].is_a?(Numeric) && clean[name] > field[:max]
-          fail! "!English_name can't be higher than !max."
+          fail! "{{English name}} can't be higher than !max."
         end
 
       when [Fixnum, NilClass]
         case
         when clean[name].is_a?(String) && clean[name].size < field[:min]
-          fail! "!English_name can't be shorter than !min characters."
+          fail! "{{English name}} can't be shorter than !min characters."
         when clean[name].is_a?(Numeric) && clean[name] < field[:min]
-          fail! "!English_name can't be less than !min."
+          fail! "{{English name}} can't be less than !min."
         end
 
       when [Fixnum, Fixnum]
         case
         when clean[name].is_a?(String) && (clean[name].size < field[:min] || clean[name].size > field[:max])
-          fail! "!English_name must be between !min and !max characters."
+          fail! "{{English name}} must be between !min and !max characters."
         when clean[name].is_a?(Numeric) && (clean[name] < field[:min] || clean[name] > field[:max])
-          fail! "!English_name must be between !min and !max."
+          fail! "{{English name}} must be between !min and !max."
         end
 
       else
@@ -672,7 +667,7 @@ module Datoki
     # === Is value in options? =======
     if field[:options]
       if !field[:options].include?(clean[name])
-        fail! "!English_name can only be: #{field[:options].map(&:inspect).join ', '}"
+        fail! "{{English name}} can only be: #{field[:options].map(&:inspect).join ', '}"
       end
     end
     # ================================
@@ -685,18 +680,18 @@ module Datoki
         when :type
           case
           when field?(:numeric) && !clean[name].is_a?(Integer)
-            fail! "!English_name needs to be an integer."
+            fail! "{{English name}} needs to be an integer."
           when field?(:chars) && !clean[name].is_a?(String)
-            fail! "!English_name needs to be a String."
+            fail! "{{English name}} needs to be a String."
           end
 
         when :exact_size
           if clean[name].size != field[:exact_size]
             case
             when field?(:chars) || clean[name].is_a?(String)
-              fail! "!English_name needs to be !exact_size in length."
+              fail! "{{English name}} needs to be !exact_size in length."
             else
-              fail! "!English_name can only be !exact_size in size."
+              fail! "{{English name}} can only be !exact_size in size."
             end
           end
 
@@ -709,29 +704,31 @@ module Datoki
           args.each { |pair|
             meth, msg, other = pair
             target = send(meth)
-            fail!(msg || "!English_name must be equal to: #{target.inspect}") unless clean[name] == target
+            fail!(msg || "{{English name}} must be equal to: #{target.inspect}") unless clean[name] == target
           }
 
         when :included_in
           arr, msg, other = args
-          fail!(msg || "!English_name must be one of these: #{arr.join ', '}") unless arr.include?(clean[name])
+          fail!(msg || "{{English name}} must be one of these: #{arr.join ', '}") unless arr.include?(clean[name])
 
         when :upcase
           clean[name] = clean[name].upcase
 
         when :match
-          args.each { |pair|
-            regex, msg, other = pair
-            if clean[name] !~ regex
-              fail!(msg || "!English_name must match #{regex.inspect}")
-            end
-          }
+          args.each { |regex|
+            case regex
+            when Regexp
+              if clean[name] !~ regex
+                fail!(error_msg(:mis_match) || "{{English name}} is invalid.")
+              end
 
-        when :not_match
-          args.each { |pair|
-            regex, msg, other = pair
-            if clean[name] =~ regex
-              fail!(msg || "!English_name must not match #{regex.inspect}")
+            when Proc
+              if !regex.call(self, clean[name])
+                fail!(error_msg(:mis_match) || "{{English name}} is invalid.")
+              end
+
+            else
+              fail ArgumentError, "Unknown matcher: #{regex.inspect}"
             end
           }
 
@@ -741,12 +738,12 @@ module Datoki
     } # === field[:cleaners].each
   end # === def clean
 
-  def new_data
-    @new_data ||= {}
+  def error_msg type
+    field[:error_msgs][type]
   end
 
   def fail! msg
-    err_msg = msg.gsub(/!([a-z\_\-]+)/i) { |raw|
+    err_msg = msg.gsub(/\{\{([a-z\_\-]+)\}\}/i) { |raw|
       name = $1
       case name
       when "English_name"
