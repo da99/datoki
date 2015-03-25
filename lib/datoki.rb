@@ -294,6 +294,15 @@ module Datoki
       self
     end
 
+    def unique_index name, msg = nil
+      field[:unique_index] = name
+      if msg
+        field[:error_msgs] ||= {}
+        field[:error_msgs][:unique] = msg
+      end
+      self
+    end
+
     def primary_key
       field[:primary_key] = true
       if field?(:unknown)
@@ -529,8 +538,8 @@ module Datoki
 
         rescue Sequel::UniqueConstraintViolation => e
 
-          self.class.fields.each { |f|
-            if e.message["'\"#{f}_"]
+          self.class.fields.each { |f, meta|
+            if meta[:unique_index] && e.message[%^unique constraint "#{meta[:unique_index]}"^]
               field_name f
               fail! :unique, "{{English name}} already taken: #{final[f]}"
             end
