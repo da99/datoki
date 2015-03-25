@@ -552,7 +552,8 @@ module Datoki
 
   def db_clean
     @clean.select { |k, v|
-      !self.class.fields[k][:pseudo]
+      meta = self.class.fields[k]
+      !meta || !meta[:pseudo]
     }
   end
 

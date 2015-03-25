@@ -36,8 +36,20 @@ describe "Datoki.db" do
     Datoki_Test.table_name.should == :datoki_test
   end # === it sets :table_name to name of class
 
-  it "allows an undefined field that exists in the db schema" do
+  it "allows to save undefined field to the db" do
     Class.new {
+      include Datoki
+      table :datoki_test
+
+      def create
+        clean[:title] = 'title 123'
+      end
+    }.create({})
+    DB[:datoki_test].all.last[:title].should == 'title 123'
+  end # === it allows to save undefined field to the db
+
+  it "allows an undefined field that exists in the db schema" do
+    r = Class.new {
       include Datoki
       table :datoki_test
       field(:id) { primary_key }
@@ -45,7 +57,9 @@ describe "Datoki.db" do
       def create
         clean :title
       end
-    }.create(:title=>'title').data.should == {:id=>1, :title=>'title', :body=>'hello'}
+    }.create(:title=>'title').data
+    r[:title].should == 'title'
+    r[:body].should == 'hello'
   end
 
   it 'raises Schema_Conflict if a field is found that allows null, but not specifed to do so' do
