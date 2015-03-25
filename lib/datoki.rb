@@ -303,6 +303,10 @@ module Datoki
       self
     end
 
+    def secret
+      field[:secret] = true
+    end
+
     def primary_key
       field[:primary_key] = true
       if field?(:unknown)
@@ -848,11 +852,27 @@ module Datoki
     self.class::TABLE
   end
 
+  def returning_fields
+    table_name = self.class.table_name
+    return [] unless table_name
+    s = Datoki.db.schema(table_name)
+    return [] unless s
+    s.map { |pair|
+      name, meta = pair
+      field = self.class.fields[name]
+      if !field || !field[:secret]
+        name
+      else
+        nil
+      end
+    }.compact
+  end
+
   def db_insert
     k = :db_insert
     final = db_clean
     fail "Already inserted." if @db_ops[k]
-    @data = (@data || {}).merge(TABLE().returning.insert(final).first)
+    @data = (@data || {}).merge(TABLE().returning(*returning_fields).insert(final).first)
     @db_ops[k] = true
   end
 

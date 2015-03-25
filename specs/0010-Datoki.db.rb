@@ -53,6 +53,21 @@ describe "Datoki.db" do
     Datoki_Test.table_name.should == :datoki_test
   end # === it sets :table_name to name of class
 
+  it "does not return fields marked as :secret" do
+    c = Class.new {
+      include Datoki
+      table :datoki_test
+      field(:title) { varchar 1, 123 }
+      field(:body) { text nil, 1, 123; secret }
+
+      def create
+        clean :id, :title, :body
+      end
+    }
+    r = c.create(:title=>'test', :body=>'my body')
+    r.data.keys.should == [:id, :title]
+  end # === it does not return fields marked as :secret
+
   it "allows to save undefined field to the db" do
     Class.new {
       include Datoki
