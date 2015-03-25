@@ -465,7 +465,7 @@ module Datoki
 
   # ================= Instance Methods ===============
 
-  attr_reader :error, :data
+  attr_reader :error, :data, :raw
   def initialize unknown = nil
     @data       = nil
     @field_name = nil
