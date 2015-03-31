@@ -493,12 +493,18 @@ module Datoki
     @db_ops     = {} # Ex: :db_insert=>true, :db_update=>true
 
     if unknown
-      if unknown.keys.all? { |f| self.class.fields.has_key?(f) }
+      is_record = unknown.keys.all? { |f|
+        self.class.fields.has_key?(f) ||
+          (self.class.schema && self.class.schema.has_key?(f)) 
+      }
+
+      if is_record
         @data = unknown
         @data.default_proc = Key_Not_Found
       else
         @raw = unknown
       end
+
     end
 
     if @raw
@@ -847,8 +853,7 @@ module Datoki
   end
 
   def create?
-    (@raw.has_key?(:create) && @raw[:create]) ||
-    @raw.has_key?(primary_key[:name]) && !@raw[primary_key[:name]]
+    !!(@raw.has_key?(:create) && @raw[:create])
   end
 
   def read?
