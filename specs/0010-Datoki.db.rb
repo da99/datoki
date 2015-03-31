@@ -26,24 +26,6 @@ describe "Datoki.db" do
     }
   } # === before
 
-  it "throws :invalid for a violation of a unique key constraint of a defined field" do
-    c = Class.new {
-      include Datoki
-      table :datoki_test
-      field(:id) { integer; primary_key; unique_index 'datoki_test_pkey' }
-      field(:title) { varchar 1, 123 }
-      field(:body) { text nil, 1, 123 }
-
-      def create
-        clean :id, :title, :body
-      end
-    }
-    r = @klass.create :title=>'the title', :body=>'yes yes yes'
-    catch(:invalid) {
-      c.create :id=>r.data[:id], :title=>r.data[:title], :body=>r.data[:body]
-    }.error[:msg].should.match /Id already taken/
-  end # === it
-
   it "sets :table_name to name of class" do
     class Datoki_Test
       include Datoki
