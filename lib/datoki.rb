@@ -548,7 +548,7 @@ module Datoki
           self.class.fields.each { |f, meta|
             if meta[:unique_index] && e.message[%^unique constraint "#{meta[:unique_index]}"^]
               field_name f
-              fail! :unique, "{{English name}} already taken: #{final[f]}"
+              fail! :unique, "{{English name}} already taken: #{meta[:name]}"
             end
           }
           raise e
