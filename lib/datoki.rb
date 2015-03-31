@@ -470,7 +470,12 @@ module Datoki
     end
 
     def create raw
-      raw[:create] = self
+      raw[:create] = self.to_s
+      new raw
+    end
+
+    def update raw
+      raw[:update] = self.to_s
       new raw
     end
 
@@ -478,7 +483,7 @@ module Datoki
 
   # ================= Instance Methods ===============
 
-  attr_reader :error, :data, :raw
+  attr_reader :error, :raw
   def initialize unknown = nil
     @data       = nil
     @field_name = nil
@@ -501,11 +506,12 @@ module Datoki
       schema = self.class.schema
 
       case
-      when create? && respond_to?(:create)
+      when create?
         create
-      when update? && respond_to?(:update)
+      when update?
+        clean primary_key[:name]
         update
-      when delete? && respond_to?(:delete)
+      when delete?
         delete
       end
 
@@ -520,7 +526,6 @@ module Datoki
 
       if !@skips[:db] && !self.class.schema.empty?
 
-        final = db_clean
         begin
           case
 
@@ -528,12 +533,10 @@ module Datoki
             db_insert
 
           when update?
-
-            DB[self.class.table].
-              where(primary_key[:name] => final.delete(primary_key[:name])).
-              update(final)
+            db_update
 
           when delete?
+            final = db_clean
             DB[self.class.table].
               where(primary_key[:name] => final.delete(primary_key[:name])).
               delete
@@ -553,6 +556,11 @@ module Datoki
         end # === begin/rescue
       end # === if !@skips[:db]
     end # === if @raw
+  end
+
+  def data
+    fail "Data not set." unless @data
+    @data
   end
 
   def skip name
@@ -821,10 +829,17 @@ module Datoki
     self.class.inspect_field? :type, field_name, *args
   end
 
+  def id
+    d = data
+    pk = primary_key[:name]
+    fail "No primary key set yet." unless d.has_key?(pk)
+    d[pk]
+  end
+
   def primary_key
-    arr = self.class.fields.detect { |k, v| v[:primary_key] }
-    fail "Primary key not found." unless arr
-    arr.last
+    name, meta = self.class.fields.detect { |k, v| v[:primary_key] }
+    fail "Primary key not found." unless meta
+    meta
   end
 
   def new?
@@ -852,6 +867,11 @@ module Datoki
     self.class::TABLE
   end
 
+  #
+  # This method removes keys that
+  # are meant to be secret: e.g. encrypted passwords.
+  # This decreases the chance they end up in logs.
+  #
   def returning_fields
     table_name = self.class.table_name
     return [] unless table_name
@@ -870,10 +890,27 @@ module Datoki
 
   def db_insert
     k = :db_insert
-    final = db_clean
     fail "Already inserted." if @db_ops[k]
-    @data = (@data || {}).merge(TABLE().returning(*returning_fields).insert(final).first)
+
+    final = db_clean
+    new_data = TABLE().returning(*returning_fields).insert(final).first
+    @data = (@data || {}).merge(new_data)
     @db_ops[k] = true
+  end
+
+  def db_update
+    k = :db_update
+    fail "Already updated" if @db_ops[k]
+
+    final = db_clean
+    new_data = TABLE().
+      returning(*returning_fields).
+      where(primary_key[:name] => final.delete(primary_key[:name])).
+      update(final).
+      first
+
+    @data = (@data || {}).merge(new_data)
+    @db_ops[:db_update]  = true
   end
 
 end # === module Datoki ===
