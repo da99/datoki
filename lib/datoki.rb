@@ -137,6 +137,26 @@ module Datoki
       fields[@current_field][:allow][sym] = true;
     end
 
+    #
+    # This method removes keys that
+    # are meant to be secret: e.g. encrypted passwords.
+    # This decreases the chance they end up in logs.
+    #
+    def returning_fields
+      return [] unless table_name
+      s = Datoki.db.schema(table_name)
+      return [] unless s
+      s.map { |pair|
+        name, meta = pair
+        field = fields[name]
+        if !field || !field[:secret]
+          name
+        else
+          nil
+        end
+      }.compact
+    end
+
     def field? *args
       inspect_field?(:type, field[:name], *args)
     end
@@ -872,25 +892,8 @@ module Datoki
     self.class::TABLE
   end
 
-  #
-  # This method removes keys that
-  # are meant to be secret: e.g. encrypted passwords.
-  # This decreases the chance they end up in logs.
-  #
   def returning_fields
-    table_name = self.class.table_name
-    return [] unless table_name
-    s = Datoki.db.schema(table_name)
-    return [] unless s
-    s.map { |pair|
-      name, meta = pair
-      field = self.class.fields[name]
-      if !field || !field[:secret]
-        name
-      else
-        nil
-      end
-    }.compact
+    self.class.returning_fields
   end
 
   def db_insert
